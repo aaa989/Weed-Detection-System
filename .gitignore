@@ -76,9 +76,12 @@ yolo_dataset/
 backend/models/rsod_yolo11n/
 !backend/models/.gitkeep
 
-# 原始数据集
+# 原始数据集 - 允许我们的 weed 数据集提交
 backend/data/
-!backend/data/.gitkeep
+!backend/data/
+!backend/data/rsod/
+!backend/data/rsod/yolo_dataset/
+!backend/data/rsod/yolo_dataset/rsod.yaml
 
 # 静态文件目录（上传图片、检测结果）
 backend/static/uploads/
@@ -93,10 +96,6 @@ backend/static/results/
 !backend/results/*.jpg
 !backend/results/*.csv
 !backend/results/*.yaml
-
-# 数据集
-!backend/uploads/
-!backend/uploads/yolo_dataset_ready/
 
 # Notebook
 !backend/__notebook_source__.ipynb

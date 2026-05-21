@@ -1,18 +1,33 @@
 backend/
-├── models/                    # 模型文件
-│   ├── best.pt               # YOLO 最佳权重
-│   ├── last.pt               # YOLO 最后权重
-│   ├── yolo11_best.pt        # YOLO11 最佳模型
-│   ├── yolo11n.pt            # YOLO11 预训练模型
-│   ├── yolo26n.pt            # YOLO26 预训练模型
-│   └── best_efficientnet.pth # EfficientNet 模型
-├── results/                   # 训练结果
-│   ├── BoxF1_curve.png
+├── app/                           # API 和服务代码（原有）
+│   ├── api/
+│   ├── models/
+│   ├── services/
+│   ├── utils/
+│   ├── config.py
+│   └── database.py
+├── models/                        # ✅ 模型文件
+│   ├── yolo11n.pt                # 预训练模型
+│   ├── yolo26n.pt                # 预训练模型
+│   ├── yolo11_best.pt            # 训练好的模型
+│   ├── best.pt                   # 训练好的模型
+│   ├── last.pt                   # 最后权重
+│   └── best_efficientnet.pth     # EfficientNet 模型
+├── data/rsod/yolo_dataset/       # ✅ 数据集（符合 train_model.py 期望）
+│   ├── rsod.yaml                # 数据集配置文件
+│   ├── images/
+│   │   ├── train/               # 1289 张训练图片
+│   │   └── val/                 # 667 张验证图片
+│   └── labels/
+│       ├── train/               # 1289 个训练标签
+│       └── val/                 # 667 个验证标签
+├── results/                       # ✅ 训练结果图表
 │   ├── confusion_matrix.png
-│   ├── results.csv
+│   ├── BoxF1_curve.png
+│   ├── results.png
 │   └── ... (其他图表)
-├── uploads/yolo_dataset_ready/ # 数据集
-│   ├── images/train/ & val/
-│   ├── labels/train/ & val/
-│   └── data.yaml
-└── __notebook_source__.ipynb  # Notebook
+├── logs/                          # 训练日志目录
+├── static/                        # 静态文件目录
+│   ├── uploads/
+│   └── results/
+└── __notebook_source__.ipynb      # Notebook 文件
