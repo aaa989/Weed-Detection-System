@@ -59,6 +59,7 @@ logs/
 # 允许我们的模型文件全部上传
 # ==================================
 !backend/models/
+!backend/models/**/*
 
 # YOLO 训练输出目录
 runs/
