@@ -55,6 +55,12 @@ logs/
 *.weights
 *.ckpt
 
+# ==================================
+# 允许提交当前项目的模型文件
+# ==================================
+!backend/models/*.pt
+!backend/models/*.pth
+
 # YOLO 训练输出目录
 runs/
 yolo_dataset/
@@ -65,15 +71,29 @@ yolo_dataset/
 # 训练好的模型（保留目录结构）
 backend/models/rsod_yolo11n/
 !backend/models/.gitkeep
-backend/models/yolo11n.pt
+# backend/models/yolo11n.pt  # 允许提交，上面已配置
 
-# 原始数据集
+# 原始数据集（允许我们的数据集提交）
 backend/data/
 !backend/data/.gitkeep
 
 # 静态文件目录（上传图片、检测结果）
 backend/static/uploads/
 backend/static/results/
+
+# ==================================
+# 我们的项目文件（允许提交）
+# ==================================
+# 训练结果图表 - 先排除目录再允许具体内容
+!backend/results/
+backend/results/.gitkeep
+!backend/results/*
+
+# 数据集
+!backend/uploads/
+backend/uploads/.gitkeep
+!backend/uploads/yolo_dataset_ready/
+
 
 # ==================================
 # Docker 数据目录（统一存储）
