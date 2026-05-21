@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="utf-8"?>
+<annotation>
+	<source>
+		<image>optic rs image</image>
+		<annotation>Lmars RSDS2016</annotation>
+		<flickrid>0</flickrid>
+		<database>Lmars Detection Dataset of RS</database>
+	</source>
+	<object>
+		<bndbox>
+			<xmin>188</xmin>
+			<ymin>499</ymin>
+			<ymax>610</ymax>
+			<xmax>285</xmax>
+		</bndbox>
+		<difficult>0</difficult>
+		<pose>Left</pose>
+		<name>oiltank</name>
+		<truncated>1</truncated>
+	</object>
+	<object>
+		<bndbox>
+			<xmin>305</xmin>
+			<ymin>470</ymin>
+			<ymax>578</ymax>
+			<xmax>408</xmax>
+		</bndbox>
+		<difficult>0</difficult>
+		<pose>Left</pose>
+		<name>oiltank</name>
+		<truncated>1</truncated>
+	</object>
+	<object>
+		<bndbox>
+			<xmin>434</xmin>
+			<ymin>440</ymin>
+			<ymax>547</ymax>
+			<xmax>535</xmax>
+		</bndbox>
+		<difficult>0</difficult>
+		<pose>Left</pose>
+		<name>oiltank</name>
+		<truncated>1</truncated>
+	</object>
+	<object>
+		<bndbox>
+			<xmin>586</xmin>
+			<ymin>307</ymin>
+			<ymax>377</ymax>
+			<xmax>661</xmax>
+		</bndbox>
+		<difficult>0</difficult>
+		<pose>Left</pose>
+		<name>oiltank</name>
+		<truncated>1</truncated>
+	</object>
+	<object>
+		<bndbox>
+			<xmin>613</xmin>
+			<ymin>397</ymin>
+			<ymax>476</ymax>
+			<xmax>690</xmax>
+		</bndbox>
+		<difficult>0</difficult>
+		<pose>Left</pose>
+		<name>oiltank</name>
+		<truncated>1</truncated>
+	</object>
+	<filename>oiltank_27.jpg</filename>
+	<segmented>0</segmented>
+	<owner>
+		<name>Lmars, Wuhan University</name>
+		<flickrid>I do not know</flickrid>
+	</owner>
+	<folder>RSDS2016</folder>
+	<size>
+		<width>1083</width>
+		<depth>3</depth>
+		<height>923</height>
+	</size>
+</annotation>
