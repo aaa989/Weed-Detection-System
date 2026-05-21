@@ -304,13 +304,9 @@ const performSingleDetection = async (file) => {
     isDetecting.value = true;
     hasImage.value = true;
 
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("model_name", selectedModel.value);
-
     originalImage.value = URL.createObjectURL(file);
 
-    const response = await detectSingleImage(formData);
+    const response = await detectSingleImage(file, selectedModel.value);
     if (response.success && response.data) {
       detectionResult.value = response.data;
       resultImage.value = response.data.result_image_url;

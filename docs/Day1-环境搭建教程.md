@@ -2,7 +2,7 @@
 
 > 学习目标：掌握项目初始化、Git版本控制、Docker部署、FastAPI框架搭建的完整流程
 
----
+***
 
 ## 📋 今日任务清单
 
@@ -12,7 +12,7 @@
 - [ ] 虚拟环境配置与依赖安装
 - [ ] 健康检查接口测试
 
----
+***
 
 ## 一、Git与GitHub版本控制
 
@@ -44,6 +44,7 @@ git config --list
 **步骤1**: 登录GitHub → New Repository
 
 **仓库设置**:
+
 - Repository name: `rsod-web-platform`
 - Description: `遥感目标智能检测平台`
 - Public/Private: 根据需求选择
@@ -131,7 +132,7 @@ models/*.pt
 *.log
 ```
 
----
+***
 
 ## 二、Docker Compose部署
 
@@ -255,7 +256,7 @@ http://localhost:9001
 2. Bucket Name: `rsod-bucket`
 3. 点击 `Create Bucket`
 
----
+***
 
 ## 三、FastAPI后端框架初始化
 
@@ -477,7 +478,7 @@ UPLOAD_DIR=uploads
 RESULT_DIR=results
 ```
 
----
+***
 
 ## 四、虚拟环境配置与依赖安装
 
@@ -494,7 +495,7 @@ python -m venv .venv
 source .venv/bin/activate
 
 # Windows
-# .venv\Scripts\activate
+.venv\Scripts\activate
 ```
 
 ### 4.2 创建requirements.txt
@@ -572,7 +573,7 @@ pip install -r requirements.txt
 pip list
 ```
 
----
+***
 
 ## 五、启动后端服务
 
@@ -609,7 +610,7 @@ curl http://localhost:8000/health
 }
 ```
 
----
+***
 
 ## 六、今日总结
 
@@ -657,3 +658,4 @@ rsod-web-platform/
 - YOLO模型集成
 - 前端模板对接
 - 检测结果展示
+
