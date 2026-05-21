@@ -56,10 +56,14 @@ logs/
 *.ckpt
 
 # ==================================
-# 允许提交当前项目的模型文件
+# 允许我们的 weed detection 模型
 # ==================================
-!backend/models/*.pt
-!backend/models/*.pth
+!backend/models/best.pt
+!backend/models/last.pt
+!backend/models/yolo11_best.pt
+!backend/models/yolo11n.pt
+!backend/models/yolo26n.pt
+!backend/models/best_efficientnet.pth
 
 # YOLO 训练输出目录
 runs/
@@ -71,9 +75,8 @@ yolo_dataset/
 # 训练好的模型（保留目录结构）
 backend/models/rsod_yolo11n/
 !backend/models/.gitkeep
-# backend/models/yolo11n.pt  # 允许提交，上面已配置
 
-# 原始数据集（允许我们的数据集提交）
+# 原始数据集
 backend/data/
 !backend/data/.gitkeep
 
@@ -84,16 +87,19 @@ backend/static/results/
 # ==================================
 # 我们的项目文件（允许提交）
 # ==================================
-# 训练结果图表 - 先排除目录再允许具体内容
+# 训练结果图表
 !backend/results/
-backend/results/.gitkeep
-!backend/results/*
+!backend/results/*.png
+!backend/results/*.jpg
+!backend/results/*.csv
+!backend/results/*.yaml
 
 # 数据集
 !backend/uploads/
-backend/uploads/.gitkeep
 !backend/uploads/yolo_dataset_ready/
 
+# Notebook
+!backend/__notebook_source__.ipynb
 
 # ==================================
 # Docker 数据目录（统一存储）
