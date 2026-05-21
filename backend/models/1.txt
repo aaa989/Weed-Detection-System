@@ -1,0 +1,18 @@
+backend/
+├── models/                    # 模型文件
+│   ├── best.pt               # YOLO 最佳权重
+│   ├── last.pt               # YOLO 最后权重
+│   ├── yolo11_best.pt        # YOLO11 最佳模型
+│   ├── yolo11n.pt            # YOLO11 预训练模型
+│   ├── yolo26n.pt            # YOLO26 预训练模型
+│   └── best_efficientnet.pth # EfficientNet 模型
+├── results/                   # 训练结果
+│   ├── BoxF1_curve.png
+│   ├── confusion_matrix.png
+│   ├── results.csv
+│   └── ... (其他图表)
+├── uploads/yolo_dataset_ready/ # 数据集
+│   ├── images/train/ & val/
+│   ├── labels/train/ & val/
+│   └── data.yaml
+└── __notebook_source__.ipynb  # Notebook
