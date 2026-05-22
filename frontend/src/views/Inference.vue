@@ -32,7 +32,7 @@
       <img :src="resultImageUrl" alt="检测结果" class="result-img" />
       <div class="detections-list">
         <el-tag v-for="(item, index) in detections" :key="index" type="success">
-          {{ item.class }}: {{ (item.confidence * 100).toFixed(1) }}%
+          {{ item.class_name }}: {{ (item.confidence * 100).toFixed(1) }}%
         </el-tag>
       </div>
     </div>
@@ -80,14 +80,12 @@ const handleInference = async () => {
   formData.append("file", selectedFile.value);
 
   try {
-    const res = await axios.post("http://localhost:8000/api/inference/single", formData, {
-      headers: { "Content-Type": "multipart/form-data" },
-    });
+    const res = await axios.post("http://localhost:8000/api/detection/single", formData);
 
-    if (res.data.code === 200) {
+    if (res.data.success) {
       ElMessage.success("推理成功！");
-      resultImageUrl.value = res.data.data.image_url;
-      detections.value = res.data.data.detections;
+      resultImageUrl.value = res.data.data.result_image_url;
+      detections.value = res.data.data.boxes;
     } else {
       ElMessage.error(res.data.message || "推理失败");
     }
