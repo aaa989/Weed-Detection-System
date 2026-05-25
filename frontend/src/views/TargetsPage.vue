@@ -3,7 +3,7 @@
     <!-- 页面头部 -->
     <div class="page-header">
       <h1 class="page-title">目标检测库</h1>
-      <p class="page-subtitle">平台支持检测的所有遥感目标类别</p>
+      <p class="page-subtitle">平台支持检测的所有杂草类别</p>
     </div>
 
     <!-- 搜索框 -->

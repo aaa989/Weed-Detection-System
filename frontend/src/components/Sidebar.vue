@@ -5,7 +5,7 @@
         <Monitor style="color: white; font-size: 20px" />
       </div>
       <div class="logo-text">
-        <div class="logo-title">遥感目标识别平台</div>
+        <div class="logo-title">杂草识别检测系统(Weed-Detection-System)</div>
         <div class="logo-subtitle">多场景影像·精准识别</div>
       </div>
     </div>

@@ -5,8 +5,8 @@
         <div class="logo-icon">
           <el-icon :size="40" color="#27ae60"><Picture /></el-icon>
         </div>
-        <h1 class="login-title">遥感目标智能检测平台</h1>
-        <p class="login-subtitle">多场景遥感影像 · 精准目标检测</p>
+        <h1 class="login-title">杂草识别检测系统(Weed-Detection-System)</h1>
+        <p class="login-subtitle">杂草识别检测 · 精准目标检测</p>
       </div>
 
       <el-form

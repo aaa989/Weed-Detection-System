@@ -7,10 +7,8 @@
         <span class="separator">›</span>
         <span class="active">智能检测</span>
       </div>
-      <h1 class="page-title">上传遥感影像，立即识别多类目标</h1>
-      <p class="page-subtitle">
-        支持飞机 / 油罐 / 操场 / 建筑物 / 船舶 / 农业虫害等多目标检测
-      </p>
+      <h1 class="page-title">上传杂草图片，立即检测识别</h1>
+      <p class="page-subtitle">支持农作物，杂草等多目标检测</p>
     </div>
 
     <!-- 模型选择器 -->
@@ -143,7 +141,7 @@
           <div v-if="!hasImage" class="empty-state">
             <el-icon class="empty-icon"><Upload /></el-icon>
             <p class="empty-text">请上传图片开始检测</p>
-            <p class="empty-desc">上传遥感影像以识别目标</p>
+            <p class="empty-desc">上传杂草图片以检测目标</p>
           </div>
           <div
             v-else-if="!detectionResult || detectionResult.total_objects === 0"
@@ -498,7 +496,7 @@ const handleRedetect = () => {
 .image-compare {
   display: flex;
   gap: 16px;
-  height: 320px;
+  min-height: 320px;
 }
 
 .image-card {
@@ -507,6 +505,7 @@ const handleRedetect = () => {
   border-radius: 8px;
   overflow: hidden;
   background-color: #f9fafb;
+  min-height: 320px;
 }
 
 .image-placeholder {
@@ -541,7 +540,7 @@ const handleRedetect = () => {
 .compare-image {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .image-label {

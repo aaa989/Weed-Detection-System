@@ -158,7 +158,7 @@ function getBoxStyle(box: DetectionBox) {
   position: relative;
   background: rgba(0, 0, 0, 0.3);
   border-radius: 8px;
-  overflow: hidden;
+  overflow: auto;
   flex: 1;
   min-height: 0;
 }

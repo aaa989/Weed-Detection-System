@@ -2,7 +2,7 @@
   <div class="qa-page">
     <div class="page-header">
       <h1 class="page-title">AI 智能问答</h1>
-      <p class="page-subtitle">关于遥感目标检测的任何问题，都可以问我</p>
+      <p class="page-subtitle">关于杂草识别检测的任何问题，都可以问我</p>
     </div>
 
     <div class="chat-container">
@@ -12,7 +12,7 @@
             <el-icon><ChatDotRound /></el-icon>
           </div>
           <div class="message-content">
-            你好！我是遥感目标检测AI助手。我可以帮你解答关于飞机、油罐、操场、立交桥、农业病虫害等遥感目标检测的相关问题，也可以为你提供检测结果的详细分析。
+            你好！我是杂草识别检测AI助手。我可以帮你解答关于杂草种类识别、病虫害检测等相关问题，也可以为你提供检测结果的详细分析。
           </div>
         </div>
       </div>
