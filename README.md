@@ -1,23 +1,31 @@
 
-# 遥感目标检测平台
+# 杂草智能识别平台
 
-&gt; 基于 YOLO11 的目标检测平台，支持单图检测、批量检测、视频检测、实时摄像头检测和 AI 智能问答
+> 基于 YOLO11 的杂草智能识别平台，支持单图检测、批量检测、视频检测、实时摄像头检测和 AI 智能问答
 
 ***
 
 ## 项目简介
 
-**遥感目标检测平台** 是一个基于深度学习的目标检测系统，用于对图片、视频和实时摄像头画面中的目标进行检测和识别。
+**杂草智能识别平台** 是一个基于深度学习的杂草识别系统，利用计算机视觉技术实现对农田中杂草的快速、准确识别，为精准农业提供智能化解决方案。
 
 ### 核心功能
 
-- **单图检测**：上传单张图片进行目标检测
-- **批量检测**：批量上传图片进行检测
-- **视频检测**：上传视频文件进行逐帧检测
-- **摄像头实时检测**：使用摄像头进行实时目标检测
-- **AI 智能问答**：集成 DeepSeek AI，提供智能问答服务
+- **单图检测**：上传单张农田图片进行杂草检测与分类
+- **批量检测**：批量上传多张图片进行杂草识别
+- **视频检测**：上传视频文件进行逐帧杂草检测
+- **摄像头实时检测**：使用摄像头进行实时杂草识别
+- **AI 智能问答**：集成 DeepSeek AI，提供杂草识别相关知识问答服务
 - **用户认证**：支持用户注册、登录和个人信息管理
 - **历史记录**：查看和管理检测历史记录
+
+### 技术特点
+
+- **高精度检测**：基于 YOLO11 目标检测算法，支持多种杂草类别识别
+- **实时处理**：优化的模型推理速度，满足实时检测需求
+- **双阶段 AI 流水线**：YOLO11 目标定位 + EfficientNet 细粒度分类
+- **可视化展示**：检测结果可视化标注，支持置信度展示
+- **容器化部署**：Docker 一键部署，环境配置简单
 
 ***
 
@@ -220,7 +228,7 @@ npm run dev
 
 | 变量名 | 默认值 | 说明 |
 |--------|--------|------|
-| APP_NAME | RSOD Detection Platform | 应用名称 |
+| APP_NAME | Weed Detection Platform | 应用名称 |
 | APP_VERSION | 1.0.0 | 应用版本 |
 | DEBUG | true | 调试模式 |
 | HOST | 0.0.0.0 | 监听地址 |
@@ -237,7 +245,7 @@ npm run dev
 | REDIS_HOST | localhost | Redis 主机 |
 | REDIS_PORT | 6379 | Redis 端口 |
 | REDIS_PASSWORD | redis_password | Redis 密码 |
-| YOLO_MODEL_PATH | models/yolo11n.pt | YOLO 模型路径 |
+| YOLO_MODEL_PATH | models/yolo11_best.pt | YOLO 模型路径 |
 | CONFIDENCE_THRESHOLD | 0.5 | 置信度阈值 |
 | IOU_THRESHOLD | 0.45 | IOU 阈值 |
 | DEEPSEEK_API_KEY | | DeepSeek API 密钥 |
@@ -252,7 +260,6 @@ npm run dev
 - [Day1-环境搭建教程.md](file:///e:/py111/Weed-Detection-System-main/Weed-Detection-System-main/docs/Day1-环境搭建教程.md)
 - [Day2-单图检测全流程教程.md](file:///e:/py111/Weed-Detection-System-main/Weed-Detection-System-main/docs/Day2-单图检测全流程教程.md)
 - [Day3-模型训练与微调教程.md](file:///e:/py111/Weed-Detection-System-main/Weed-Detection-System-main/docs/Day3-模型训练与微调教程.md)
-- [遥感目标检测-项目介绍.md](file:///e:/py111/Weed-Detection-System-main/Weed-Detection-System-main/docs/遥感目标检测-项目介绍.md)
 
 ***
 
@@ -269,12 +276,6 @@ npm run dev
 - [x] 历史记录管理
 - [x] AI 智能问答功能
 - [x] 模型训练与微调脚本
-
-***
-
-## 许可证
-
-本项目采用 MIT 许可证。
 
 ***
 
