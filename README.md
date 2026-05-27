@@ -253,21 +253,11 @@ npm run dev
 
 ***
 
-## 文档
-
-详细的开发教程和文档请查看 [docs/](file:///e:/py111/Weed-Detection-System-main/Weed-Detection-System-main/docs/) 目录：
-
-- [Day1-环境搭建教程.md](file:///e:/py111/Weed-Detection-System-main/Weed-Detection-System-main/docs/Day1-环境搭建教程.md)
-- [Day2-单图检测全流程教程.md](file:///e:/py111/Weed-Detection-System-main/Weed-Detection-System-main/docs/Day2-单图检测全流程教程.md)
-- [Day3-模型训练与微调教程.md](file:///e:/py111/Weed-Detection-System-main/Weed-Detection-System-main/docs/Day3-模型训练与微调教程.md)
-
-***
-
 ## 开发进度
 
 ### 已完成
 
-- [x] 环境搭建（Docker Compose）
+- [x] 环境搭建
 - [x] 用户认证系统（注册、登录）
 - [x] 单图检测功能
 - [x] 批量检测功能
@@ -275,7 +265,7 @@ npm run dev
 - [x] 摄像头实时检测功能
 - [x] 历史记录管理
 - [x] AI 智能问答功能
-- [x] 模型训练与微调脚本
+- [x] 模型训练
 
 ***
 
