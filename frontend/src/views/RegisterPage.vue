@@ -93,6 +93,8 @@
 import { ref, reactive } from "vue";
 import { UserFilled, User, Message, Lock } from "@element-plus/icons-vue";
 import { useRouter } from "vue-router";
+import { ElMessage } from "element-plus";
+import { register } from "@/api/auth";
 
 const router = useRouter();
 
@@ -147,13 +149,31 @@ const registerRules = {
 };
 
 const registerFormRef = ref(null);
+const isRegistering = ref(false);
 
-const handleRegister = () => {
-  registerFormRef.value.validate((valid) => {
-    if (valid) {
-      console.log("注册请求:", registerForm);
-      localStorage.setItem("token", "mock-token");
-      router.push("/detection");
+const handleRegister = async () => {
+  registerFormRef.value.validate(async (valid) => {
+    if (!valid) return;
+    isRegistering.value = true;
+    try {
+      const res = await register({
+        username: registerForm.username,
+        email: registerForm.email,
+        password: registerForm.password,
+      });
+      if (res.success) {
+        localStorage.setItem("token", res.access_token);
+        localStorage.setItem("user", JSON.stringify(res.user));
+        ElMessage.success(res.message || "注册成功");
+        router.push("/detection");
+      } else {
+        ElMessage.error(res.message || "注册失败");
+      }
+    } catch (error) {
+      const msg = error?.response?.data?.detail || error?.message || "注册失败，请稍后重试";
+      ElMessage.error(msg);
+    } finally {
+      isRegistering.value = false;
     }
   });
 };

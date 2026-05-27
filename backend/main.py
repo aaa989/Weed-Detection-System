@@ -11,10 +11,18 @@ from fastapi.staticfiles import StaticFiles                      # 静态文件�
 from app.config import settings                                  # 配置
 from app.api.detection import router as detection_router         # 检测 API 路由
 from app.api.model import router as model_router                 # 模型管理 API 路由
+from app.api.camera import router as camera_router               # 摄像头实时检测 API 路由
+from app.api.auth import router as auth_router                   # 用户认证 API 路由
+from app.api.batch import router as batch_router                 # 批量检测 API 路由
+from app.api.video import router as video_router                 # 视频检测 API 路由
+from app.api.video_detection import router as video_detection_router  # 实时视频帧检测 API 路由
 from app.utils.file_utils import ensure_directories              # 确保目录存在
 
-# 启动时确保必要的目录存在（上传目录、结果目录等）
 ensure_directories()
+
+from app.models.database import init_db
+init_db()
+print("Database tables initialized successfully!")
 
 # =============================================================================
 # 创建 FastAPI 应用实例
@@ -50,6 +58,20 @@ app.mount("/static", StaticFiles(directory=settings.static_dir), name="static")
 app.include_router(detection_router, prefix="/api")
 # 所有模型管理相关的 API 都会以 /api/model 为前缀
 app.include_router(model_router, prefix="/api")
+app.include_router(camera_router, prefix="/api")
+app.include_router(auth_router, prefix="/api")
+app.include_router(batch_router, prefix="/api")
+app.include_router(video_router, prefix="/api")
+app.include_router(video_detection_router, prefix="/api")
+
+
+@app.on_event("startup")
+async def startup_event():
+    import threading
+    from app.services.camera_detection_service import camera_detection_service
+    def preload():
+        camera_detection_service._load_model()
+    threading.Thread(target=preload, daemon=True).start()
 
 
 # =============================================================================

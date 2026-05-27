@@ -58,7 +58,7 @@ import cv2
 from app.config import settings
 
 # 导入数据模型
-from app.models.schemas import DetectionBox, DetectionResult
+from app.models.schemas import DetectionBox, DetectionResult, RealtimeDetectionResult
 from app.models.database import DetectionRecord, DetectionResult as DBDetectionResult
 
 # 导入数据库会话
@@ -277,41 +277,15 @@ class DetectionService:
             return False
 
     def _init_class_names(self):
-        """
-        初始化类别名称映射
-
-        功能：
-        - 定义 RSOD 数据集的 4 类目标名称
-        - 类别 ID 从 0 开始
-
-        说明：
-        - RSOD 数据集包含 4 种遥感目标
-        - 支持飞机、油罐、立交桥、操场的检测
-        """
-        # RSOD 数据集 4 类目标名称映射
-        # 类别 ID：目标名称
         self.class_names = {
-            0: "aircraft",    # 飞机
-            1: "oiltank",     # 油罐
-            2: "overpass",    # 立交桥
-            3: "playground",  # 操场
+            0: "crop",
+            1: "weed",
         }
 
     def get_class_chinese_name(self, class_name: str) -> str:
-        """
-        获取类别的中文名称
-
-        参数：
-            class_name: 类别英文名称
-
-        返回：
-            str: 类别中文名称
-        """
         chinese_names = {
-            "aircraft": "飞机",
-            "oiltank": "油罐",
-            "overpass": "立交桥",
-            "playground": "操场"
+            "crop": "作物",
+            "weed": "杂草"
         }
         return chinese_names.get(class_name, class_name)
 
@@ -375,6 +349,10 @@ class DetectionService:
 
                 # 提取置信度
                 confidence = float(box.conf[0])
+
+                # 二次过滤：确保置信度不低于设定的阈值
+                if confidence < settings.confidence_threshold:
+                    continue
 
                 # 提取类别 ID
                 class_id = int(box.cls[0])
@@ -597,6 +575,67 @@ class DetectionService:
         except Exception as e:
             logger.error(f"获取检测记录失败: {str(e)}")
             return None
+
+    def detect_frame_realtime(self, image, model_name: str = "rsod-yolo11n",
+                              confidence_threshold: float = None,
+                              iou_threshold: float = None):
+        """
+        实时视频帧检测（不保存到数据库）
+
+        参数:
+            image: numpy数组格式的图片
+            model_name: 模型名称
+            confidence_threshold: 置信度阈值
+            iou_threshold: IOU阈值
+
+        返回:
+            RealtimeDetectionResult: 检测结果对象
+        """
+        if confidence_threshold is None:
+            confidence_threshold = settings.confidence_threshold
+        if iou_threshold is None:
+            iou_threshold = settings.iou_threshold
+
+        if self.model is None:
+            self._load_model_smart()
+
+        start_time = time.time()
+
+        results = self.model.predict(
+            source=image,
+            conf=confidence_threshold,
+            iou=iou_threshold,
+            save=False
+        )
+
+        boxes = []
+        for result in results:
+            for box in result.boxes:
+                x1, y1, x2, y2 = box.xyxy[0].tolist()
+                confidence = float(box.conf[0])
+                class_id = int(box.cls[0])
+                class_name = self.class_names.get(class_id, f"class_{class_id}")
+
+                boxes.append(DetectionBox(
+                    x1=round(x1, 2),
+                    y1=round(y1, 2),
+                    x2=round(x2, 2),
+                    y2=round(y2, 2),
+                    confidence=round(confidence, 4),
+                    class_id=class_id,
+                    class_name=class_name,
+                    chinese_name=self.get_class_chinese_name(class_name)
+                ))
+
+        detection_time = time.time() - start_time
+
+        return RealtimeDetectionResult(
+            total_objects=len(boxes),
+            boxes=boxes,
+            detection_time=round(detection_time, 4),
+            image_width=image.shape[1] if len(image.shape) >= 2 else 0,
+            image_height=image.shape[0] if len(image.shape) >= 2 else 0
+        )
 
     def delete_detection(self, detection_id: str) -> bool:
         """

@@ -35,6 +35,8 @@ import {
   ChatDotRound,
   DataLine,
   User,
+  VideoCamera,
+  VideoPlay,
 } from "@element-plus/icons-vue";
 
 const router = useRouter();
@@ -45,6 +47,16 @@ const menuList = [
     name: "智能检测",
     icon: Picture,
     path: "/detection",
+  },
+  {
+    name: "摄像头检测",
+    icon: VideoCamera,
+    path: "/camera",
+  },
+  {
+    name: "视频检测",
+    icon: VideoPlay,
+    path: "/video",
   },
   {
     name: "历史记录",

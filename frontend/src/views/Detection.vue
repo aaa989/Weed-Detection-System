@@ -6,7 +6,7 @@
         智能检测
       </h2>
       <div class="header-actions">
-        <el-radio-group v-model="detectMode" size="small">
+        <el-radio-group v-model="detectMode" size="small" @change="onModeChange">
           <el-radio-button value="single">单图检测</el-radio-button>
           <el-radio-button value="batch">批量检测</el-radio-button>
         </el-radio-group>
@@ -14,16 +14,37 @@
     </div>
 
     <div class="detection-content" :class="{ 'is-single': detectMode === 'single' }">
-      <!-- 左侧上传区 -->
       <div class="upload-section">
         <div class="section-card">
-          <div class="card-title">上传图片</div>
-          <ImageUploader v-model="uploadFile" />
+          <div class="card-title">
+            {{ detectMode === 'single' ? '上传图片' : '批量上传（最多50张）' }}
+          </div>
+
+          <template v-if="detectMode === 'single'">
+            <ImageUploader v-model="uploadFile" />
+          </template>
+
+          <template v-else>
+            <el-upload
+              ref="batchUploadRef"
+              :auto-upload="false"
+              :limit="50"
+              multiple
+              accept="image/*"
+              list-type="picture-card"
+              v-model:file-list="batchFileList"
+              :on-exceed="onExceed"
+              :on-change="onBatchFileChange"
+            >
+              <el-icon><Plus /></el-icon>
+            </el-upload>
+          </template>
+
           <div class="upload-actions">
             <el-button
               type="primary"
               :loading="isDetecting"
-              :disabled="!uploadFile"
+              :disabled="detectMode === 'single' ? !uploadFile : batchFileList.length === 0"
               @click="handleDetect"
               size="large"
               class="detect-btn"
@@ -34,13 +55,24 @@
           </div>
         </div>
 
-        <BatchProgress
-          :visible="detectMode === 'batch' && batchItems.length > 0"
-          :items="batchItems"
-        />
+        <div v-if="detectMode === 'batch' && batchTaskId" class="section-card batch-progress-card">
+          <div class="card-title">
+            批量检测进度
+            <el-tag :type="batchStatus === 'completed' ? 'success' : batchStatus === 'failed' ? 'danger' : 'warning'" size="small">
+              {{ batchStatusText }}
+            </el-tag>
+          </div>
+          <el-progress
+            :percentage="batchProgress"
+            :status="batchStatus === 'completed' ? 'success' : batchStatus === 'failed' ? 'exception' : undefined"
+          />
+          <div class="batch-stats">
+            <span>已完成: {{ batchCompleted }}/{{ batchTotal }}</span>
+            <span v-if="batchFailed > 0" class="failed-count">失败: {{ batchFailed }}</span>
+          </div>
+        </div>
       </div>
 
-      <!-- 右侧结果区 -->
       <div class="result-section">
         <div class="section-card result-card">
           <ResultViewer :result="detectionResult" />
@@ -51,22 +83,66 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { ElLoading, ElMessage } from 'element-plus'
-import { Picture, Search } from '@element-plus/icons-vue'
+import { Picture, Search, Plus } from '@element-plus/icons-vue'
 import ImageUploader from '@/components/ImageUploader.vue'
 import ResultViewer from '@/components/ResultViewer.vue'
-import BatchProgress from '@/components/BatchProgress.vue'
-import { detectSingleImage } from '@/api/detection'
-import type { DetectionResult, BatchDetectionItem } from '@/api/types'
+import { detectSingleImage, batchUpload, getBatchStatus } from '@/api/detection'
+import type { DetectionResult } from '@/api/types'
 
 const detectMode = ref<'single' | 'batch'>('single')
 const uploadFile = ref<File | null>(null)
 const isDetecting = ref(false)
 const detectionResult = ref<DetectionResult | null>(null)
-const batchItems = ref<BatchDetectionItem[]>([])
+
+const batchFileList = ref<any[]>([])
+const batchTaskId = ref('')
+const batchStatus = ref('')
+const batchProgress = ref(0)
+const batchTotal = ref(0)
+const batchCompleted = ref(0)
+const batchFailed = ref(0)
+
+let batchPollTimer: ReturnType<typeof setInterval> | null = null
+
+const batchStatusText = computed(() => {
+  const map: Record<string, string> = {
+    pending: '等待中',
+    processing: '处理中',
+    completed: '已完成',
+    failed: '失败',
+  }
+  return map[batchStatus.value] || batchStatus.value
+})
+
+function onModeChange() {
+  detectionResult.value = null
+  batchFileList.value = []
+  stopBatchPolling()
+  batchTaskId.value = ''
+}
+
+function onExceed() {
+  ElMessage.warning('最多只能上传50张图片')
+}
+
+function onBatchFileChange(file: any) {
+  if (!file.raw?.type?.startsWith('image/')) {
+    batchFileList.value = batchFileList.value.filter(f => f.uid !== file.uid)
+    ElMessage.warning('只支持图片文件')
+  }
+}
 
 async function handleDetect() {
+  if (detectMode.value === 'single') {
+    await handleSingleDetect()
+  } else {
+    await handleBatchDetect()
+  }
+}
+
+async function handleSingleDetect() {
   if (!uploadFile.value) return
   isDetecting.value = true
   const loading = ElLoading.service({
@@ -79,10 +155,9 @@ async function handleDetect() {
   try {
     const res = await detectSingleImage(uploadFile.value)
     if (res.success && res.data) {
-      const detectionTime = (performance.now() - startTime) / 1000
       detectionResult.value = {
         ...res.data,
-        detection_time: detectionTime,
+        detection_time: (performance.now() - startTime) / 1000,
       }
     } else {
       ElMessage.error(res.message || '检测失败')
@@ -96,38 +171,73 @@ async function handleDetect() {
   }
 }
 
-// Mock 数据演示
-async function mockDetect() {
-  if (!uploadFile.value) return
+async function handleBatchDetect() {
+  if (batchFileList.value.length === 0) return
   isDetecting.value = true
-  const loading = ElLoading.service({ lock: true, text: '正在检测中...', background: 'rgba(0, 0, 0, 0.7)' })
-  const startTime = performance.now()
 
-  setTimeout(() => {
-    detectionResult.value = {
-      detection_id: 'mock-' + Date.now(),
-      image_url: URL.createObjectURL(uploadFile.value!),
-      result_image_url: URL.createObjectURL(uploadFile.value!),
-      boxes: [
-        { x1: 50, y1: 30, x2: 150, y2: 130, confidence: 0.95, class_id: 0, class_name: 'aircraft', chinese_name: '飞机' },
-        { x1: 200, y1: 60, x2: 320, y2: 180, confidence: 0.88, class_id: 0, class_name: 'aircraft', chinese_name: '飞机' },
-        { x1: 350, y1: 100, x2: 450, y2: 200, confidence: 0.91, class_id: 1, class_name: 'oiltank', chinese_name: '油罐' },
-        { x1: 100, y1: 200, x2: 220, y2: 320, confidence: 0.82, class_id: 2, class_name: 'overpass', chinese_name: '立交桥' },
-        { x1: 300, y1: 250, x2: 400, y2: 350, confidence: 0.79, class_id: 3, class_name: 'playground', chinese_name: '操场' },
-      ],
-      total_objects: 5,
-      detection_time: 0.52,
-      model_name: 'rsod-yolo11n',
-      created_at: new Date().toISOString(),
+  try {
+    const formData = new FormData()
+    batchFileList.value.forEach((file: any) => {
+      if (file.raw) {
+        formData.append('files', file.raw)
+      }
+    })
+
+    const res = await batchUpload(formData)
+    if (res.success) {
+      batchTaskId.value = res.task_id
+      batchTotal.value = res.total
+      batchStatus.value = 'pending'
+      batchProgress.value = 0
+      batchCompleted.value = 0
+      batchFailed.value = 0
+      ElMessage.success(`批量任务已创建，共 ${res.total} 张图片`)
+      startBatchPolling()
+    } else {
+      ElMessage.error(res.message || '批量任务创建失败')
+      isDetecting.value = false
     }
+  } catch (error) {
+    ElMessage.error('批量上传失败，请检查后端服务')
+    console.error(error)
     isDetecting.value = false
-    loading.close()
+  }
+}
+
+function startBatchPolling() {
+  if (batchPollTimer) return
+  batchPollTimer = setInterval(async () => {
+    try {
+      const res = await getBatchStatus(batchTaskId.value)
+      if (res.success) {
+        batchStatus.value = res.status
+        batchCompleted.value = res.completed || 0
+        batchFailed.value = res.failed || 0
+        batchTotal.value = res.total || 0
+        if (res.total > 0) {
+          batchProgress.value = Math.round(((res.completed + res.failed) / res.total) * 100)
+        }
+
+        if (res.status === 'completed' || res.status === 'failed') {
+          stopBatchPolling()
+          isDetecting.value = false
+          if (res.status === 'completed') {
+            ElMessage.success(`批量检测完成！成功: ${res.completed}, 失败: ${res.failed}`)
+          }
+        }
+      }
+    } catch (error) {
+      console.error('Poll batch status error:', error)
+    }
   }, 2000)
 }
 
-// 取消注释下面这行，替换 handleDetect 中的 try 块以使用 mock 数据
-// 如果后端未启动，可以在开发时使用 mockDetect
-// handleDetect 已经实现真实调用，如需 Mock 请将下面函数绑定到按钮
+function stopBatchPolling() {
+  if (batchPollTimer) {
+    clearInterval(batchPollTimer)
+    batchPollTimer = null
+  }
+}
 </script>
 
 <style scoped>
@@ -197,6 +307,32 @@ async function mockDetect() {
   margin-bottom: 16px;
   padding-bottom: 12px;
   border-bottom: 1px solid rgba(64, 158, 255, 0.1);
+}
+
+.upload-actions {
+  margin-top: 16px;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.detect-btn {
+  min-width: 140px;
+}
+
+.batch-progress-card {
+  margin-top: 16px;
+}
+
+.batch-stats {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 10px;
+  font-size: 13px;
+  color: #c8d6e5;
+}
+
+.failed-count {
+  color: #F56C6C;
 }
 
 .upload-section {

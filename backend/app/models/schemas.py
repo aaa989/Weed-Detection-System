@@ -376,3 +376,29 @@ class ReloadModelResponse(BaseModel):
     success: bool
     message: str
     data: Optional[ModelItem] = None
+
+
+class RealtimeDetectionResult(BaseModel):
+    """
+    实时检测结果数据模型
+
+    与 DetectionResult 的区别：
+    - 不包含数据库相关字段（如 detection_id、created_at）
+    - 不包含图片 URL
+    - 包含图像尺寸信息，便于前端对齐绘制
+    - 专门用于实时帧检测返回
+    """
+    boxes: List[DetectionBox]
+    total_objects: int
+    detection_time: float
+    image_width: int
+    image_height: int
+
+
+class RealtimeDetectionResponse(BaseModel):
+    """
+    实时检测响应模型
+    """
+    success: bool
+    message: str
+    data: Optional[RealtimeDetectionResult] = None

@@ -148,28 +148,21 @@ const selectedTarget = ref(null);
 const categories = ref([
   {
     id: 1,
-    name: "交通工具类",
+    name: "农业识别",
     icon: Bicycle,
     color: "#3b82f6",
     targets: [
-      { id: 1, name: "飞机", categoryId: 1, description: "各类民航、军用飞机", accuracy: "98.5%" },
-      { id: 2, name: "船舶", categoryId: 1, description: "货轮、客轮、军舰等", accuracy: "97.2%" },
-      { id: 3, name: "汽车", categoryId: 1, description: "各类乘用车、商用车", accuracy: "96.8%" },
-      { id: 4, name: "火车", categoryId: 1, description: "客运、货运列车", accuracy: "95.6%" },
-      { id: 5, name: "卡车", categoryId: 1, description: "大型货运卡车", accuracy: "94.3%" },
+      { id: 1, name: "作物", categoryId: 1, description: "农田中的各类农作物", accuracy: "96.5%" },
+      { id: 2, name: "杂草", categoryId: 1, description: "各类杂草识别", accuracy: "95.2%" },
     ],
   },
   {
     id: 2,
-    name: "建筑设施类",
+    name: "其他",
     icon: OfficeBuilding,
     color: "#10b981",
     targets: [
-      { id: 6, name: "油罐", categoryId: 2, description: "储油罐、储气罐", accuracy: "99.1%" },
-      { id: 7, name: "立交桥", categoryId: 2, description: "城市互通立交桥", accuracy: "97.8%" },
-      { id: 8, name: "体育场", categoryId: 2, description: "各类体育场馆", accuracy: "96.4%" },
-      { id: 9, name: "港口", categoryId: 2, description: "海港、河港设施", accuracy: "95.9%" },
-      { id: 10, name: "机场跑道", categoryId: 2, description: "机场起降跑道", accuracy: "98.7%" },
+      { id: 6, name: "未知", categoryId: 2, description: "未分类目标", accuracy: "90.0%" },
     ],
   },
   {

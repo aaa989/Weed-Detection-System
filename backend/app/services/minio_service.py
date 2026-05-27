@@ -69,19 +69,24 @@ class MinIOService:
         - 创建 MinIO 客户端连接
         - 自动创建配置的 Bucket（如果不存在）
         """
-        # 构建 MinIO 服务器地址，格式：主机:端口
-        endpoint = f"{settings.minio.host}:{settings.minio.port}"
+        self._connected = False
+        self.client = None
 
-        # 创建 MinIO 客户端实例
-        self.client = Minio(
-            endpoint=endpoint,                              # MinIO 服务器地址
-            access_key=settings.minio.access_key,         # 访问密钥
-            secret_key=settings.minio.secret_key,         # 秘密密钥
-            secure=settings.minio.secure                   # 是否使用 HTTPS
-        )
+        try:
+            endpoint = f"{settings.minio.host}:{settings.minio.port}"
 
-        # 启动时确保所有需要的 Bucket 存在
-        self._ensure_buckets()
+            self.client = Minio(
+                endpoint=endpoint,
+                access_key=settings.minio.access_key,
+                secret_key=settings.minio.secret_key,
+                secure=settings.minio.secure
+            )
+
+            self._ensure_buckets()
+            self._connected = True
+        except Exception as e:
+            print(f"MinIO 连接失败（服务可能未启动）: {e}")
+            self._connected = False
 
     def _ensure_buckets(self):
         """

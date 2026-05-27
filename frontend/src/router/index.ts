@@ -7,6 +7,18 @@ const routes: RouteRecordRaw[] = [
     redirect: '/detection',
   },
   {
+    path: '/login',
+    name: 'Login',
+    component: () => import('@/views/LoginPage.vue'),
+    meta: { title: '登录' },
+  },
+  {
+    path: '/register',
+    name: 'Register',
+    component: () => import('@/views/RegisterPage.vue'),
+    meta: { title: '注册' },
+  }, 
+  {
     path: '/detection',
     name: 'Detection',
     component: () => import('@/views/Detection.vue'),
@@ -23,6 +35,18 @@ const routes: RouteRecordRaw[] = [
     name: 'Analysis',
     component: () => import('@/views/Analysis.vue'),
     meta: { title: '结果分析', icon: 'DataAnalysis' },
+  },
+  {
+    path: '/camera',
+    name: 'CameraDetection',
+    component: () => import('@/views/CameraDetection.vue'),
+    meta: { title: '摄像头实时检测', icon: 'VideoCamera' },
+  },
+  {
+    path: '/video',
+    name: 'VideoDetection',
+    component: () => import('@/views/VideoDetection.vue'),
+    meta: { title: '视频检测', icon: 'VideoPlay' },
   },
 ]
 

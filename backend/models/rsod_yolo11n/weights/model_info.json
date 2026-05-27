@@ -1,24 +1,6 @@
 {
-  "version": "1.0.0",
+  "version": "unknown",
   "object_name": "rsod-yolo11n-best_v1.0.0_20260519020916.pt",
-  "loaded_at": "2026-05-22T17:03:13.529298",
-  "metadata": {
-    "name": "rsod-yolo11n-best",
-    "version": "1.0.0",
-    "created_at": "2026-05-19T02:09:17.121518",
-    "description": "rsod-yolo11n-best model",
-    "metrics": {
-      "mAP50": 0.876,
-      "mAP50-95": 0.652,
-      "precision": 0.891,
-      "recall": 0.845,
-      "f1": 0.867
-    },
-    "config": {
-      "epochs": 100,
-      "batch": 16,
-      "imgsz": 640,
-      "device": "cpu"
-    }
-  }
+  "loaded_at": "2026-05-27T13:37:21.167607",
+  "metadata": null
 }

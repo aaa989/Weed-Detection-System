@@ -101,14 +101,12 @@ const stats = ref({
   totalDetections: 128,
   totalObjects: 456,
   avgTime: 0.52,
-  topClass: '飞机',
+  topClass: '杂草',
 })
 
 const classData = [
-  { name: '飞机', value: 186, color: '#409EFF' },
-  { name: '油罐', value: 128, color: '#36cfc9' },
-  { name: '立交桥', value: 82, color: '#ffb547' },
-  { name: '操场', value: 60, color: '#ff4d4f' },
+  { name: '杂草', value: 186, color: '#ff4d4f' },
+  { name: '作物', value: 128, color: '#409EFF' },
 ]
 
 const dailyData = {

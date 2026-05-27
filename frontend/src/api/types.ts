@@ -55,7 +55,43 @@ export interface BatchDetectionItem {
   result?: DetectionResult
 }
 
+export interface BatchUploadResponse {
+  success: boolean
+  message: string
+  task_id: string
+  total: number
+}
+
+export interface BatchStatusResponse {
+  success: boolean
+  status: string
+  completed: number
+  failed: number
+  total: number
+  progress: number
+}
+
 export interface StatCountItem {
   class_name: string
   count: number
+}
+
+export interface CameraDetectRequest {
+  image: string
+  frame_index: number
+}
+
+export interface CameraDetectResponse {
+  success: boolean
+  message: string
+  boxes: DetectionBox[]
+  frame_index: number
+  fps: number
+  detection_time: number
+  total_objects: number
+}
+
+export interface CameraStatusResponse {
+  status: string
+  message: string
 }

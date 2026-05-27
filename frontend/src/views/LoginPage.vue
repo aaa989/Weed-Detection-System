@@ -46,7 +46,7 @@
         </el-form-item>
 
         <el-form-item>
-          <el-button type="primary" size="large" class="login-btn" @click="handleLogin">
+          <el-button type="primary" size="large" class="login-btn" @click="handleLogin" :loading="isLoggingIn">
             登录
           </el-button>
         </el-form-item>
@@ -64,6 +64,8 @@
 import { ref, reactive } from "vue";
 import { Picture, User, Lock } from "@element-plus/icons-vue";
 import { useRouter } from "vue-router";
+import { ElMessage } from "element-plus";
+import { login } from "@/api/auth";
 
 const router = useRouter();
 
@@ -85,13 +87,30 @@ const loginRules = {
 };
 
 const loginFormRef = ref(null);
+const isLoggingIn = ref(false);
 
-const handleLogin = () => {
-  loginFormRef.value.validate((valid) => {
-    if (valid) {
-      console.log("登录请求:", loginForm);
-      localStorage.setItem("token", "mock-token");
-      router.push("/detection");
+const handleLogin = async () => {
+  loginFormRef.value.validate(async (valid) => {
+    if (!valid) return;
+    isLoggingIn.value = true;
+    try {
+      const res = await login({
+        username: loginForm.username,
+        password: loginForm.password,
+      });
+      if (res.success) {
+        localStorage.setItem("token", res.access_token);
+        localStorage.setItem("user", JSON.stringify(res.user));
+        ElMessage.success(res.message || "登录成功");
+        router.push("/detection");
+      } else {
+        ElMessage.error(res.message || "登录失败");
+      }
+    } catch (error) {
+      const msg = error?.response?.data?.detail || error?.message || "登录失败，请检查用户名和密码";
+      ElMessage.error(msg);
+    } finally {
+      isLoggingIn.value = false;
     }
   });
 };

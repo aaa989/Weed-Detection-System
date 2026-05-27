@@ -5,6 +5,7 @@
     @dragover.prevent="onDragOver"
     @dragleave.prevent="onDragLeave"
     @drop.prevent="onDrop"
+    @click="triggerInput"
   >
     <input
       ref="fileInputRef"
