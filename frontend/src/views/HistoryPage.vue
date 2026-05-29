@@ -1,16 +1,26 @@
 <template>
   <div class="history-page">
-    <!-- 页面头部 -->
     <div class="page-header">
-      <h1 class="page-title">检测历史记录</h1>
-      <p class="page-subtitle">查看和管理您的所有检测记录</p>
+      <div class="header-left">
+        <h1 class="page-title">
+          <el-icon :size="22"><Document /></el-icon>
+          检测历史记录
+        </h1>
+        <p class="page-subtitle">查看和管理您的所有检测记录</p>
+      </div>
+      <div class="header-stats">
+        <div class="stat-item">
+          <span class="stat-value">{{ totalRecords }}</span>
+          <span class="stat-label">总记录</span>
+        </div>
+      </div>
     </div>
 
-    <!-- 搜索和筛选 -->
     <div class="search-bar">
       <el-input
         v-model="searchQuery"
-        placeholder="搜索检测记录..."
+        placeholder="搜索文件名..."
+        clearable
         size="default"
         class="search-input"
       >
@@ -20,108 +30,103 @@
       </el-input>
 
       <el-select
-        v-model="filterStatus"
-        placeholder="状态筛选"
-        size="default"
-        class="filter-select"
-      >
-        <el-option label="全部" value="" />
-        <el-option label="检测完成" value="completed" />
-        <el-option label="检测中" value="processing" />
-        <el-option label="失败" value="failed" />
-      </el-select>
-
-      <el-select
         v-model="filterType"
-        placeholder="类型筛选"
+        placeholder="检测类型"
+        clearable
         size="default"
         class="filter-select"
       >
-        <el-option label="全部" value="" />
+        <el-option label="全部类型" value="" />
         <el-option label="单图检测" value="single" />
         <el-option label="批量检测" value="batch" />
-        <el-option label="文件夹" value="folder" />
         <el-option label="视频检测" value="video" />
       </el-select>
-    </div>
 
-    <!-- 记录列表 -->
-    <div class="history-list">
-      <div
-        v-for="record in filteredRecords"
-        :key="record.id"
-        class="history-card"
-        @click="viewRecord(record)"
+      <el-button
+        type="primary"
+        plain
+        @click="fetchHistory"
+        :loading="isLoading"
       >
-        <div class="record-preview">
-          <img
-            :src="record.result_image_url || record.image_url"
-            :alt="record.filename"
-            class="preview-image"
-          />
-          <div
-            class="status-badge"
-            :class="record.status"
-          >
-            <el-icon><component :is="getStatusIcon(record.status)" /></el-icon>
-            {{ getStatusText(record.status) }}
-          </div>
-        </div>
-
-        <div class="record-info">
-          <div class="record-header">
-            <span class="record-filename">{{ record.filename }}</span>
-            <span class="record-type">{{ getTypeText(record.type) }}</span>
-          </div>
-          <div class="record-meta">
-            <span class="meta-item">
-              <el-icon><Clock /></el-icon>
-              {{ record.time }}
-            </span>
-            <span class="meta-item">
-              <el-icon><Picture /></el-icon>
-              {{ record.count || 1 }} 张图片
-            </span>
-            <span class="meta-item">
-              <el-icon><Aim /></el-icon>
-              {{ record.total_objects }} 个目标
-            </span>
-          </div>
-          <div class="record-tags">
-            <span
-              v-for="tag in record.detectedTargets"
-              :key="tag"
-              class="detected-tag"
-            >
-              {{ tag }}
-            </span>
-          </div>
-        </div>
-
-        <div class="record-actions">
-          <el-button size="small" @click.stop="viewRecord(record)">
-            <el-icon><Monitor/></el-icon>
-            查看
-          </el-button>
-          <el-button size="small" @click.stop="downloadRecord(record)">
-            <el-icon><Download/></el-icon>
-            下载
-          </el-button>
-          <el-button
-            size="small"
-            type="danger"
-            @click.stop="deleteRecord(record)"
-          >
-            <el-icon><Delete/></el-icon>
-            删除
-          </el-button>
-        </div>
-      </div>
+        <el-icon><Refresh /></el-icon>
+        刷新
+      </el-button>
     </div>
 
-    <!-- 空状态 -->
-    <div v-if="filteredRecords.length === 0" class="empty-state">
-      <el-icon :size="64" class="empty-icon"><Help /></el-icon>
+    <div class="history-list" v-loading="isLoading">
+      <transition-group name="list" tag="div">
+        <div
+          v-for="record in filteredRecords"
+          :key="record.id"
+          class="history-card"
+          @click="viewRecord(record)"
+        >
+          <div class="record-preview">
+            <img
+              :src="getImageUrl(record.result_image_url || record.image_url)"
+              :alt="record.filename"
+              class="preview-image"
+              @error="onImageError"
+            />
+            <div class="status-badge" :class="record.status">
+              <el-icon><component :is="getStatusIcon(record.status)" /></el-icon>
+              {{ getStatusText(record.status) }}
+            </div>
+          </div>
+
+          <div class="record-info">
+            <div class="record-header">
+              <span class="record-filename">{{ record.filename }}</span>
+              <el-tag size="small" :type="getTypeTagType(record.type)">
+                {{ getTypeText(record.type) }}
+              </el-tag>
+            </div>
+            <div class="record-meta">
+              <span class="meta-item">
+                <el-icon><Clock /></el-icon>
+                {{ record.time }}
+              </span>
+              <span class="meta-item">
+                <el-icon><Aim /></el-icon>
+                {{ record.total_objects }} 个目标
+              </span>
+              <span class="meta-item">
+                <el-icon><Cpu /></el-icon>
+                {{ record.model_name }}
+              </span>
+            </div>
+            <div class="record-tags" v-if="record.detectedTargets && record.detectedTargets.length">
+              <span
+                v-for="tag in record.detectedTargets"
+                :key="tag"
+                class="detected-tag"
+              >
+                {{ tag }}
+              </span>
+            </div>
+          </div>
+
+          <div class="record-actions">
+            <el-button size="small" @click.stop="viewRecord(record)">
+              <el-icon><Monitor/></el-icon>
+              查看
+            </el-button>
+            <el-button
+              size="small"
+              type="danger"
+              plain
+              @click.stop="deleteRecord(record)"
+            >
+              <el-icon><Delete/></el-icon>
+              删除
+            </el-button>
+          </div>
+        </div>
+      </transition-group>
+    </div>
+
+    <div v-if="filteredRecords.length === 0 && !isLoading" class="empty-state">
+      <el-icon :size="64" class="empty-icon"><Document /></el-icon>
       <p class="empty-text">暂无检测记录</p>
       <el-button type="primary" @click="goToDetection">
         <el-icon><Plus /></el-icon>
@@ -129,43 +134,76 @@
       </el-button>
     </div>
 
-    <!-- 分页 -->
     <div class="pagination-wrapper">
       <el-pagination
-        v-if="totalRecords > 0"
+        v-if="totalRecords > pageSize"
         :total="totalRecords"
         :page-size="pageSize"
         :current-page="currentPage"
         @current-change="handlePageChange"
-        layout="prev, pager, next"
+        layout="prev, pager, next, total"
       />
     </div>
+
+    <el-dialog
+      v-model="detailVisible"
+      title="检测详情"
+      width="700px"
+      destroy-on-close
+    >
+      <div class="detail-content" v-if="selectedRecord">
+        <div class="detail-images">
+          <div class="detail-image-item">
+            <div class="image-label">检测结果</div>
+            <img
+              :src="getImageUrl(selectedRecord.result_image_url || selectedRecord.image_url)"
+              alt="检测结果"
+              class="detail-image"
+            />
+          </div>
+        </div>
+        <div class="detail-info">
+          <el-descriptions :column="2" border>
+            <el-descriptions-item label="文件名">{{ selectedRecord.filename }}</el-descriptions-item>
+            <el-descriptions-item label="检测类型">{{ getTypeText(selectedRecord.type) }}</el-descriptions-item>
+            <el-descriptions-item label="检测模型">{{ selectedRecord.model_name }}</el-descriptions-item>
+            <el-descriptions-item label="检测状态">
+              <el-tag :type="selectedRecord.status === 'completed' ? 'success' : 'danger'" size="small">
+                {{ getStatusText(selectedRecord.status) }}
+              </el-tag>
+            </el-descriptions-item>
+            <el-descriptions-item label="检测目标数">{{ selectedRecord.total_objects }}</el-descriptions-item>
+            <el-descriptions-item label="检测时间">{{ selectedRecord.time }}</el-descriptions-item>
+          </el-descriptions>
+        </div>
+      </div>
+    </el-dialog>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
 import { useRouter } from "vue-router";
+import { ElMessage, ElMessageBox } from "element-plus";
 import {
   Search,
   Clock,
-  Picture,
   Aim,
   Monitor,
-  Download,
   Delete,
   Plus,
-  Help,
+  Document,
+  Refresh,
   CircleCheck,
   Loading,
   CircleClose,
+  Cpu,
 } from "@element-plus/icons-vue";
-import { getDetectionHistory } from "../api/detection";
+import { getHistoryList, deleteDetectionRecord } from "../api/history";
 
 const router = useRouter();
 
 const searchQuery = ref("");
-const filterStatus = ref("");
 const filterType = ref("");
 const currentPage = ref(1);
 const pageSize = ref(10);
@@ -174,16 +212,19 @@ const isLoading = ref(false);
 const historyRecords = ref([]);
 const totalRecords = ref(0);
 
+const detailVisible = ref(false);
+const selectedRecord = ref(null);
+
 const fetchHistory = async () => {
   isLoading.value = true;
   try {
-    const response = await getDetectionHistory({
+    const response = await getHistoryList({
       page: currentPage.value,
       page_size: pageSize.value,
     });
-    if (response.success && response.data) {
-      historyRecords.value = response.data;
-      totalRecords.value = response.total;
+    if (response.success) {
+      historyRecords.value = response.data || [];
+      totalRecords.value = response.total || 0;
     }
   } catch (error) {
     console.error("获取历史记录失败:", error);
@@ -203,56 +244,62 @@ const filteredRecords = computed(() => {
     const matchesSearch =
       !searchQuery.value ||
       record.filename.toLowerCase().includes(searchQuery.value.toLowerCase());
-    const matchesStatus = !filterStatus.value || record.status === filterStatus.value;
     const matchesType = !filterType.value || record.type === filterType.value;
-    return matchesSearch && matchesStatus && matchesType;
+    return matchesSearch && matchesType;
   });
 });
 
+const getImageUrl = (url) => {
+  if (!url) return "";
+  if (url.startsWith("http")) return url;
+  return "http://localhost:8000" + url;
+};
+
+const onImageError = (e) => {
+  e.target.src = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='80' viewBox='0 0 120 80'%3E%3Crect fill='%23f0f0f0' width='120' height='80'/%3E%3Ctext fill='%23999' font-family='sans-serif' font-size='12' x='50%25' y='50%25' dominant-baseline='middle' text-anchor='middle'%3E暂无图片%3C/text%3E%3C/svg%3E";
+};
+
 const getStatusIcon = (status) => {
-  const icons = {
-    completed: CircleCheck,
-    processing: Loading,
-    failed: CircleClose,
-  };
+  const icons = { completed: CircleCheck, processing: Loading, failed: CircleClose };
   return icons[status] || CircleCheck;
 };
 
 const getStatusText = (status) => {
-  const texts = {
-    completed: "检测完成",
-    processing: "检测中",
-    failed: "失败",
-  };
+  const texts = { completed: "检测完成", processing: "检测中", failed: "失败" };
   return texts[status] || status;
 };
 
 const getTypeText = (type) => {
-  const texts = {
-    single: "单图检测",
-    batch: "批量检测",
-    folder: "文件夹",
-    video: "视频检测",
-  };
+  const texts = { single: "单图检测", batch: "批量检测", video: "视频检测" };
   return texts[type] || type;
 };
 
+const getTypeTagType = (type) => {
+  const map = { single: "", batch: "warning", video: "success" };
+  return map[type] || "info";
+};
+
 const viewRecord = (record) => {
-  console.log("查看记录:", record);
-  // 这里可以跳转到检测详情页面
+  selectedRecord.value = record;
+  detailVisible.value = true;
 };
 
-const downloadRecord = (record) => {
-  console.log("下载记录:", record);
-};
-
-const deleteRecord = (record) => {
-  if (confirm(`确定要删除记录 "${record.filename}" 吗？`)) {
-    const index = historyRecords.value.findIndex((r) => r.id === record.id);
-    if (index > -1) {
-      historyRecords.value.splice(index, 1);
+const deleteRecord = async (record) => {
+  try {
+    await ElMessageBox.confirm(
+      `确定要删除记录 "${record.filename}" 吗？此操作不可恢复。`,
+      "删除确认",
+      { confirmButtonText: "删除", cancelButtonText: "取消", type: "warning" }
+    );
+    try {
+      await deleteDetectionRecord(record.id);
       ElMessage.success("删除成功");
+      fetchHistory();
+    } catch (e) {
+      ElMessage.error("删除失败");
     }
+  } catch {
+    // cancelled
   }
 };
 
@@ -262,6 +309,7 @@ const goToDetection = () => {
 
 const handlePageChange = (page) => {
   currentPage.value = page;
+  fetchHistory();
 };
 </script>
 
@@ -270,30 +318,66 @@ const handlePageChange = (page) => {
   width: 100%;
 
   .page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
     margin-bottom: 24px;
 
-    .page-title {
-      font-size: 24px;
-      font-weight: 600;
-      color: var(--text-primary);
-      margin-bottom: 8px;
+    .header-left {
+      .page-title {
+        font-size: 22px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 6px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+
+        .el-icon {
+          color: var(--primary-color);
+        }
+      }
+
+      .page-subtitle {
+        font-size: 13px;
+        color: var(--text-secondary);
+      }
     }
 
-    .page-subtitle {
-      font-size: 14px;
-      color: var(--text-secondary);
+    .header-stats {
+      display: flex;
+      gap: 16px;
+
+      .stat-item {
+        background: #fff;
+        padding: 12px 20px;
+        border-radius: 10px;
+        text-align: center;
+        box-shadow: var(--card-shadow);
+
+        .stat-value {
+          display: block;
+          font-size: 24px;
+          font-weight: 700;
+          color: var(--primary-color);
+        }
+
+        .stat-label {
+          font-size: 12px;
+          color: var(--text-secondary);
+        }
+      }
     }
   }
 
   .search-bar {
     display: flex;
-    gap: 16px;
-    margin-bottom: 24px;
+    gap: 12px;
+    margin-bottom: 20px;
     align-items: center;
 
     .search-input {
-      flex: 1;
-      max-width: 300px;
+      width: 280px;
     }
 
     .filter-select {
@@ -302,25 +386,26 @@ const handlePageChange = (page) => {
   }
 
   .history-list {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
+    min-height: 200px;
   }
 
   .history-card {
     background-color: #ffffff;
     border-radius: 12px;
-    padding: 20px;
+    padding: 16px 20px;
     box-shadow: var(--card-shadow);
     display: flex;
     align-items: center;
     gap: 20px;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: all 0.25s ease;
+    margin-bottom: 12px;
+    border: 1px solid transparent;
 
     &:hover {
-      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
       transform: translateY(-2px);
+      border-color: var(--primary-light);
     }
 
     .record-preview {
@@ -329,6 +414,8 @@ const handlePageChange = (page) => {
       height: 80px;
       border-radius: 8px;
       overflow: hidden;
+      flex-shrink: 0;
+      background: #f5f5f5;
 
       .preview-image {
         width: 100%;
@@ -338,14 +425,15 @@ const handlePageChange = (page) => {
 
       .status-badge {
         position: absolute;
-        bottom: 8px;
-        left: 8px;
-        padding: 4px 10px;
-        border-radius: 12px;
-        font-size: 12px;
+        bottom: 6px;
+        left: 6px;
+        padding: 3px 8px;
+        border-radius: 10px;
+        font-size: 11px;
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 3px;
+        backdrop-filter: blur(4px);
 
         &.completed {
           background-color: rgba(34, 197, 94, 0.9);
@@ -371,38 +459,33 @@ const handlePageChange = (page) => {
       .record-header {
         display: flex;
         align-items: center;
-        gap: 12px;
-        margin-bottom: 10px;
+        gap: 10px;
+        margin-bottom: 8px;
 
         .record-filename {
-          font-size: 15px;
+          font-size: 14px;
           font-weight: 500;
           color: var(--text-primary);
-        }
-
-        .record-type {
-          padding: 3px 8px;
-          background-color: #f3f4f6;
-          border-radius: 4px;
-          font-size: 12px;
-          color: var(--text-secondary);
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
         }
       }
 
       .record-meta {
         display: flex;
         gap: 20px;
-        margin-bottom: 10px;
+        margin-bottom: 6px;
 
         .meta-item {
           display: flex;
           align-items: center;
           gap: 4px;
-          font-size: 13px;
+          font-size: 12px;
           color: var(--text-secondary);
 
           :deep(.el-icon) {
-            font-size: 14px;
+            font-size: 13px;
           }
         }
       }
@@ -410,14 +493,14 @@ const handlePageChange = (page) => {
       .record-tags {
         display: flex;
         flex-wrap: wrap;
-        gap: 6px;
+        gap: 4px;
 
         .detected-tag {
-          padding: 3px 8px;
+          padding: 2px 8px;
           background-color: rgba(39, 174, 96, 0.1);
           color: #27ae60;
           border-radius: 4px;
-          font-size: 12px;
+          font-size: 11px;
         }
       }
     }
@@ -425,6 +508,7 @@ const handlePageChange = (page) => {
     .record-actions {
       display: flex;
       gap: 8px;
+      flex-shrink: 0;
     }
   }
 
@@ -433,10 +517,10 @@ const handlePageChange = (page) => {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 60px 0;
+    padding: 80px 0;
 
     .empty-icon {
-      color: #9ca3af;
+      color: #d1d5db;
       margin-bottom: 16px;
     }
 
@@ -450,7 +534,54 @@ const handlePageChange = (page) => {
   .pagination-wrapper {
     display: flex;
     justify-content: center;
-    margin-top: 32px;
+    margin-top: 24px;
+    padding-bottom: 20px;
+  }
+
+  .list-enter-active,
+  .list-leave-active {
+    transition: all 0.3s ease;
+  }
+
+  .list-enter-from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+
+  .list-leave-to {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+}
+
+.detail-content {
+  .detail-images {
+    margin-bottom: 20px;
+
+    .detail-image-item {
+      .image-label {
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--text-primary);
+        margin-bottom: 8px;
+      }
+
+      .detail-image {
+        width: 100%;
+        max-height: 400px;
+        object-fit: contain;
+        border-radius: 8px;
+        background: #f5f5f5;
+      }
+    }
+  }
+
+  .detail-info {
+    :deep(.el-descriptions) {
+      .el-descriptions__label {
+        width: 100px;
+      }
+    }
   }
 }
 </style>

@@ -54,6 +54,9 @@ from PIL import Image
 # 导入 OpenCV 用于图片处理和绘制
 import cv2
 
+# 导入 numpy 用于数组处理
+import numpy as np
+
 # 导入应用配置
 from app.config import settings
 
@@ -293,7 +296,8 @@ class DetectionService:
                            image_path: str, 
                            user_id: Optional[str] = None,
                            model_name: str = "rsod-yolo11n",
-                           minio_svc = None) -> DetectionResult:
+                           minio_svc = None,
+                           confidence_threshold: float = None) -> DetectionResult:
         """
         单图目标检测
 
@@ -328,10 +332,13 @@ class DetectionService:
         # 生成唯一的检测 ID
         detection_id = str(uuid.uuid4())
 
+        # 使用传入的置信度阈值，否则用配置默认值
+        conf_threshold = confidence_threshold if confidence_threshold is not None else settings.confidence_threshold
+
         # 调用 YOLO 模型进行预测
         results = self.model.predict(
             source=image_path,
-            conf=settings.confidence_threshold,
+            conf=conf_threshold,
             iou=settings.iou_threshold,
             save=False
         )
@@ -351,7 +358,7 @@ class DetectionService:
                 confidence = float(box.conf[0])
 
                 # 二次过滤：确保置信度不低于设定的阈值
-                if confidence < settings.confidence_threshold:
+                if confidence < conf_threshold:
                     continue
 
                 # 提取类别 ID
@@ -387,57 +394,70 @@ class DetectionService:
                     chinese_name=chinese_name
                 ))
 
-        # 生成结果文件名
-        result_filename = f"result_{uuid.uuid4().hex}.jpg"
-
         # 绘制检测框到图片
-        # results[0].plot() 返回带检测框的图片（NumPy 数组）
         annotated_image = results[0].plot()
-
-        # 将图片从 RGB 格式转换为 BGR 格式（OpenCV 需要）
         annotated_image_bgr = cv2.cvtColor(annotated_image, cv2.COLOR_RGB2BGR)
-
-        # 将图片编码为 JPEG 格式，获取字节数据
         _, image_bytes = cv2.imencode('.jpg', annotated_image_bgr)
         image_bytes = image_bytes.tobytes()
-
-        # 使用传入的 minio_svc 或全局的 minio_service
-        minio = minio_svc if minio_svc is not None else minio_service
-
-        # 上传结果图片到 MinIO
-        result_object_name = minio.upload_result_image(image_bytes, "jpg")
 
         # 计算检测耗时
         detection_time = time.time() - start_time
 
-        # 获取原始图片文件名
-        image_filename = os.path.basename(image_path)
+        # 使用传入的 minio_svc 或全局的 minio_service
+        minio = minio_svc if minio_svc is not None else minio_service
 
-        # 将原始图片上传到 MinIO
-        with open(image_path, 'rb') as f:
-            original_image_bytes = f.read()
-        original_object_name = minio.upload_image_bytes(original_image_bytes, image_filename)
+        # 尝试通过 MinIO 上传，失败则降级为本地存储
+        use_minio = minio._connected if hasattr(minio, '_connected') else False
+        original_image_key = ""
+        result_image_key = ""
+        original_image_url = ""
+        result_image_url = ""
 
-        # 构建 MinIO 对象 key
-        original_image_key = f"uploads/{original_object_name}"
-        result_image_key = f"results/{result_object_name}"
+        if use_minio:
+            try:
+                result_object_name = minio.upload_result_image(image_bytes, "jpg")
+                with open(image_path, 'rb') as f:
+                    original_image_bytes = f.read()
+                original_object_name = minio.upload_image_bytes(original_image_bytes, os.path.basename(image_path))
+                original_image_key = f"uploads/{original_object_name}"
+                result_image_key = f"results/{result_object_name}"
+                original_image_url = f"http://localhost:8000/api/detection/files/rsod-original/{original_object_name}"
+                result_image_url = f"http://localhost:8000/api/detection/files/rsod-results/{result_object_name}"
+            except Exception as e:
+                logger.warning(f"MinIO上传失败，降级为本地存储: {str(e)}")
+                use_minio = False
+
+        if not use_minio:
+            os.makedirs(settings.result_dir, exist_ok=True)
+            result_filename = f"result_{detection_id}.jpg"
+            result_path = os.path.join(settings.result_dir, result_filename)
+            with open(result_path, 'wb') as f:
+                f.write(image_bytes)
+            result_image_url = f"http://localhost:8000/static/results/{result_filename}"
+            result_image_key = f"results/{result_filename}"
+
+            os.makedirs(settings.upload_dir, exist_ok=True)
+            upload_filename = f"original_{detection_id}.jpg"
+            upload_path = os.path.join(settings.upload_dir, upload_filename)
+            import shutil
+            shutil.copy2(image_path, upload_path)
+            original_image_url = f"http://localhost:8000/static/uploads/{upload_filename}"
+            original_image_key = f"uploads/{upload_filename}"
 
         # 保存检测记录到数据库
-        db_record = self._save_to_database(
-            user_id=user_id,
-            detection_id=detection_id,
-            model_name=model_name,
-            total_objects=len(boxes),
-            detection_time=detection_time,
-            original_image_key=original_image_key,
-            result_image_key=result_image_key,
-            results=db_results
-        )
-
-        # 构建 FastAPI 代理接口 URL
-        # 格式：http://localhost:8000/api/detection/files/{bucket}/{filename}
-        original_image_url = f"http://localhost:8000/api/detection/files/rsod-original/{original_object_name}"
-        result_image_url = f"http://localhost:8000/api/detection/files/rsod-results/{result_object_name}"
+        try:
+            db_record = self._save_to_database(
+                user_id=user_id,
+                detection_id=detection_id,
+                model_name=model_name,
+                total_objects=len(boxes),
+                detection_time=detection_time,
+                original_image_key=original_image_key,
+                result_image_key=result_image_key,
+                results=db_results
+            )
+        except Exception as e:
+            logger.warning(f"数据库保存失败: {str(e)}")
 
         # 构建检测结果对象
         return DetectionResult(
@@ -576,67 +596,6 @@ class DetectionService:
             logger.error(f"获取检测记录失败: {str(e)}")
             return None
 
-    def detect_frame_realtime(self, image, model_name: str = "rsod-yolo11n",
-                              confidence_threshold: float = None,
-                              iou_threshold: float = None):
-        """
-        实时视频帧检测（不保存到数据库）
-
-        参数:
-            image: numpy数组格式的图片
-            model_name: 模型名称
-            confidence_threshold: 置信度阈值
-            iou_threshold: IOU阈值
-
-        返回:
-            RealtimeDetectionResult: 检测结果对象
-        """
-        if confidence_threshold is None:
-            confidence_threshold = settings.confidence_threshold
-        if iou_threshold is None:
-            iou_threshold = settings.iou_threshold
-
-        if self.model is None:
-            self._load_model_smart()
-
-        start_time = time.time()
-
-        results = self.model.predict(
-            source=image,
-            conf=confidence_threshold,
-            iou=iou_threshold,
-            save=False
-        )
-
-        boxes = []
-        for result in results:
-            for box in result.boxes:
-                x1, y1, x2, y2 = box.xyxy[0].tolist()
-                confidence = float(box.conf[0])
-                class_id = int(box.cls[0])
-                class_name = self.class_names.get(class_id, f"class_{class_id}")
-
-                boxes.append(DetectionBox(
-                    x1=round(x1, 2),
-                    y1=round(y1, 2),
-                    x2=round(x2, 2),
-                    y2=round(y2, 2),
-                    confidence=round(confidence, 4),
-                    class_id=class_id,
-                    class_name=class_name,
-                    chinese_name=self.get_class_chinese_name(class_name)
-                ))
-
-        detection_time = time.time() - start_time
-
-        return RealtimeDetectionResult(
-            total_objects=len(boxes),
-            boxes=boxes,
-            detection_time=round(detection_time, 4),
-            image_width=image.shape[1] if len(image.shape) >= 2 else 0,
-            image_height=image.shape[0] if len(image.shape) >= 2 else 0
-        )
-
     def delete_detection(self, detection_id: str) -> bool:
         """
         删除检测记录
@@ -675,6 +634,63 @@ class DetectionService:
             except:
                 pass
             return False
+
+
+    def detect_frame_realtime(self, image, model_name: str = "rsod-yolo11n",
+                              confidence_threshold: float = 0.25,
+                              iou_threshold: float = 0.7):
+        """
+        实时视频帧检测（不保存到数据库）
+
+        接收numpy数组格式的图片进行快速检测，不进行持久化存储
+
+        参数:
+            image: numpy数组格式的图片
+            model_name: 模型名称
+            confidence_threshold: 置信度阈值
+            iou_threshold: IOU阈值
+
+        返回:
+            RealtimeDetectionResult: 检测结果对象
+        """
+        start_time = time.time()
+
+        results = self.model.predict(
+            source=image,
+            conf=confidence_threshold,
+            iou=iou_threshold,
+            save=False
+        )
+
+        boxes = []
+        for result in results:
+            for box in result.boxes:
+                x1, y1, x2, y2 = box.xyxy[0].tolist()
+                confidence = float(box.conf[0])
+                class_id = int(box.cls[0])
+                class_name = self.class_names.get(class_id, f"class_{class_id}")
+                chinese_name = self.get_class_chinese_name(class_name)
+
+                boxes.append(DetectionBox(
+                    x1=round(x1, 2),
+                    y1=round(y1, 2),
+                    x2=round(x2, 2),
+                    y2=round(y2, 2),
+                    confidence=round(confidence, 4),
+                    class_id=class_id,
+                    class_name=class_name,
+                    chinese_name=chinese_name
+                ))
+
+        detection_time = time.time() - start_time
+
+        return RealtimeDetectionResult(
+            total_objects=len(boxes),
+            boxes=boxes,
+            detection_time=round(detection_time, 4),
+            image_width=image.shape[1] if len(image.shape) >= 2 else 0,
+            image_height=image.shape[0] if len(image.shape) >= 2 else 0
+        )
 
 
 # =============================================================================

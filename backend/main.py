@@ -15,14 +15,18 @@ from app.api.camera import router as camera_router               # 摄像头实�
 from app.api.auth import router as auth_router                   # 用户认证 API 路由
 from app.api.batch import router as batch_router                 # 批量检测 API 路由
 from app.api.video import router as video_router                 # 视频检测 API 路由
-from app.api.video_detection import router as video_detection_router  # 实时视频帧检测 API 路由
+from app.api.video_detection import router as video_detection_router  # 视频实时帧检测 API 路由
+from app.api.qa import router as qa_router                           # AI 智能问答 API 路由
 from app.utils.file_utils import ensure_directories              # 确保目录存在
 
 ensure_directories()
 
 from app.models.database import init_db
-init_db()
-print("Database tables initialized successfully!")
+try:
+    init_db()
+    print("Database tables initialized successfully!")
+except Exception as e:
+    print(f"数据库初始化失败（服务可能未启动）: {e}")
 
 # =============================================================================
 # 创建 FastAPI 应用实例
@@ -63,6 +67,7 @@ app.include_router(auth_router, prefix="/api")
 app.include_router(batch_router, prefix="/api")
 app.include_router(video_router, prefix="/api")
 app.include_router(video_detection_router, prefix="/api")
+app.include_router(qa_router, prefix="/api")
 
 
 @app.on_event("startup")

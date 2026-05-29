@@ -105,11 +105,17 @@ def _process_batch(task_id: str, model_name: str, user_id: str):
                 "detection_id": result.detection_id,
                 "total_objects": result.total_objects,
                 "detection_time": result.detection_time,
+                "image_url": result.image_url,
+                "result_image_url": result.result_image_url,
                 "boxes": [
                     {
                         "class_name": b.class_name,
                         "chinese_name": b.chinese_name,
                         "confidence": b.confidence,
+                        "x1": b.x1,
+                        "y1": b.y1,
+                        "x2": b.x2,
+                        "y2": b.y2,
                     }
                     for b in result.boxes
                 ],

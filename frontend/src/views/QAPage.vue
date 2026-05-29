@@ -6,13 +6,28 @@
     </div>
 
     <div class="chat-container">
-      <div class="chat-messages">
-        <div class="message ai-message">
+      <div class="chat-messages" ref="chatContainer">
+        <div
+          v-for="(msg, index) in messages"
+          :key="index"
+          class="message"
+          :class="msg.role === 'user' ? 'user-message' : 'ai-message'"
+        >
+          <div class="message-avatar">
+            <el-icon v-if="msg.role === 'assistant'"><ChatDotRound /></el-icon>
+            <el-icon v-else><User /></el-icon>
+          </div>
+          <div class="message-content">
+            <div v-if="msg.role === 'assistant'" v-html="formatContent(msg.content)"></div>
+            <div v-else>{{ msg.content }}</div>
+          </div>
+        </div>
+        <div v-if="loading" class="message ai-message">
           <div class="message-avatar">
             <el-icon><ChatDotRound /></el-icon>
           </div>
-          <div class="message-content">
-            你好！我是杂草识别检测AI助手。我可以帮你解答关于杂草种类识别、病虫害检测等相关问题，也可以为你提供检测结果的详细分析。
+          <div class="message-content typing">
+            <span class="dot"></span><span class="dot"></span><span class="dot"></span>
           </div>
         </div>
       </div>
@@ -20,11 +35,19 @@
       <div class="chat-input">
         <el-input
           v-model="question"
-          placeholder="请输入你的问题..."
+          placeholder="请输入你的问题，例如：如何提高杂草检测的准确率？"
           :rows="3"
+          type="textarea"
+          @keydown.enter.exact.prevent="sendMessage"
         />
-        <el-button type="primary" class="send-btn" :loading="sending">
-          发送
+        <el-button
+          type="primary"
+          class="send-btn"
+          :loading="loading"
+          :disabled="!question.trim()"
+          @click="sendMessage"
+        >
+          {{ loading ? '思考中' : '发送' }}
         </el-button>
       </div>
     </div>
@@ -32,10 +55,80 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ref, nextTick, onMounted } from "vue";
+import { ElMessage } from "element-plus";
+import { ChatDotRound, User } from "@element-plus/icons-vue";
+import request from "@/utils/request";
 
 const question = ref("");
-const sending = ref(false);
+const loading = ref(false);
+const chatContainer = ref(null);
+
+const messages = ref([
+  {
+    role: "assistant",
+    content: "你好！我是杂草识别检测AI助手。我可以帮你解答关于杂草种类识别、病虫害检测、检测结果分析等相关问题。请随时向我提问！",
+  },
+]);
+
+async function sendMessage() {
+  const text = question.value.trim();
+  if (!text || loading.value) return;
+
+  messages.value.push({ role: "user", content: text });
+  question.value = "";
+  loading.value = true;
+
+  await nextTick();
+  scrollToBottom();
+
+  try {
+    const res = await request({
+      url: "/qa/chat",
+      method: "post",
+      data: {
+        messages: messages.value.map((m) => ({
+          role: m.role,
+          content: m.content,
+        })),
+      },
+      timeout: 60000,
+    });
+
+    if (res.success && res.data) {
+      messages.value.push({ role: "assistant", content: res.data.content });
+    } else {
+      ElMessage.error(res.message || "AI服务请求失败");
+    }
+  } catch (error) {
+    console.error("QA请求失败:", error);
+    ElMessage.error("AI服务请求失败，请稍后重试");
+  } finally {
+    loading.value = false;
+    await nextTick();
+    scrollToBottom();
+  }
+}
+
+function scrollToBottom() {
+  if (chatContainer.value) {
+    chatContainer.value.scrollTop = chatContainer.value.scrollHeight;
+  }
+}
+
+function formatContent(text) {
+  if (!text) return "";
+  return text
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\n/g, "<br>")
+    .replace(/\*\*(.*?)\*\*/g, "<strong>$1</strong>")
+    .replace(/`(.*?)`/g, "<code>$1</code>");
+}
+
+onMounted(() => {
+  scrollToBottom();
+});
 </script>
 
 <style scoped lang="scss">
@@ -68,6 +161,7 @@ const sending = ref(false);
     box-shadow: var(--card-shadow);
     display: flex;
     flex-direction: column;
+    min-height: 0;
 
     .chat-messages {
       flex: 1;
@@ -98,6 +192,16 @@ const sending = ref(false);
           max-width: 70%;
           line-height: 1.6;
           font-size: 14px;
+
+          :deep(code) {
+            background: #e5e7eb;
+            padding: 2px 6px;
+            border-radius: 4px;
+          }
+
+          :deep(strong) {
+            color: #1a1a1a;
+          }
         }
 
         &.user-message {
@@ -114,6 +218,28 @@ const sending = ref(false);
             border-radius: 12px 0 12px 12px;
           }
         }
+
+        .typing {
+          display: flex;
+          align-items: center;
+          gap: 4px;
+          padding: 16px 20px;
+
+          .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #909399;
+            animation: blink 1.4s infinite both;
+
+            &:nth-child(2) {
+              animation-delay: 0.2s;
+            }
+            &:nth-child(3) {
+              animation-delay: 0.4s;
+            }
+          }
+        }
       }
     }
 
@@ -128,6 +254,15 @@ const sending = ref(false);
         height: auto;
       }
     }
+  }
+}
+
+@keyframes blink {
+  0%, 80%, 100% {
+    opacity: 0;
+  }
+  40% {
+    opacity: 1;
   }
 }
 </style>

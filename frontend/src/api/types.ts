@@ -69,6 +69,7 @@ export interface BatchStatusResponse {
   failed: number
   total: number
   progress: number
+  results?: any[]
 }
 
 export interface StatCountItem {

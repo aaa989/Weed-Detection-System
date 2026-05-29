@@ -1,10 +1,16 @@
 import request from '@/utils/request'
 import type { SingleDetectionResponse, BatchUploadResponse, BatchStatusResponse } from './types'
 
-export function detectSingleImage(file: File, modelName = 'rsod-yolo11n'): Promise<SingleDetectionResponse> {
+export function detectSingleImage(file: File, modelName = 'rsod-yolo11n', confidenceThreshold?: number, userId?: string | null): Promise<SingleDetectionResponse> {
   const formData = new FormData()
   formData.append('file', file)
   formData.append('model_name', modelName)
+  if (confidenceThreshold !== undefined) {
+    formData.append('confidence_threshold', String(confidenceThreshold))
+  }
+  if (userId) {
+    formData.append('user_id', userId)
+  }
   return request({
     url: '/detection/single',
     method: 'post',
@@ -34,7 +40,7 @@ export function detectBatchImages(files: File[], modelName = 'rsod-yolo11n'): Pr
 export function batchUpload(formData: FormData, modelName = 'rsod-yolo11n'): Promise<BatchUploadResponse> {
   formData.append('model_name', modelName)
   return request({
-    url: '/detection/batch',
+    url: '/detection/batch/upload',
     method: 'post',
     data: formData,
     headers: {

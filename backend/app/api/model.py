@@ -122,8 +122,7 @@ async def get_model_list():
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            message="获取模型列表失败",
-            detail=str(e)
+            detail="获取模型列表失败"
         )
 
 
@@ -181,8 +180,7 @@ async def get_current_model():
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            message="获取当前模型信息失败",
-            detail=str(e)
+            detail="获取当前模型信息失败"
         )
 
 
@@ -214,7 +212,7 @@ async def reload_model(request: ReloadModelRequest = None):
         if not success:
             raise HTTPException(
                 status_code=500,
-                message="模型重新加载失败"
+                detail="模型重新加载失败"
             )
         
         # 获取重新加载后的模型信息
@@ -256,6 +254,5 @@ async def reload_model(request: ReloadModelRequest = None):
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            message="模型重新加载失败",
-            detail=str(e)
+            detail="模型重新加载失败"
         )

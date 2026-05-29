@@ -3,37 +3,37 @@
     <div class="breadcrumbs">
       <el-icon class="breadcrumb-icon"><House /></el-icon>
       <span class="breadcrumb-separator">/</span>
-      <span class="breadcrumb-text">智能检测</span>
+      <span class="breadcrumb-text">{{ currentTitle }}</span>
     </div>
 
     <div class="header-actions">
-      <el-tag type="success" effect="light" class="status-tag">
-        <el-icon class="el-icon--left"><Check /></el-icon>
-        检测完成
-      </el-tag>
-
       <div class="action-icons">
-        <el-icon class="action-icon"><Grid /></el-icon>
-        <el-icon class="action-icon"><Bell /></el-icon>
-        <el-icon class="action-icon"><QuestionFilled /></el-icon>
+        <el-icon class="action-icon" @click="router.push('/settings')"><Setting /></el-icon>
         <el-dropdown trigger="click" @command="handleCommand">
           <div class="user-dropdown">
-            <el-avatar class="user-avatar" size="32">
+            <el-avatar class="user-avatar" size="small">
               <img
                 src="https://cube.elemecdn.com/0/88/03b0d39583f48206768a7534e55bcpng.png"
                 alt="用户头像"
               />
             </el-avatar>
             <div class="user-info">
-              <div class="user-name">Lily</div>
-              <div class="user-role">普通用户</div>
+              <div class="user-name">{{ userInfo.nickname || userInfo.username || '用户' }}</div>
+              <div class="user-role">{{ roleText }}</div>
             </div>
             <el-icon class="dropdown-icon"><CaretBottom /></el-icon>
           </div>
           <template #dropdown>
             <el-dropdown-menu>
-              <el-dropdown-item command="profile">个人中心</el-dropdown-item>
-              <el-dropdown-item command="logout" divided>退出登录</el-dropdown-item>
+              <el-dropdown-item command="profile">
+                <el-icon><User /></el-icon>个人中心
+              </el-dropdown-item>
+              <el-dropdown-item command="settings">
+                <el-icon><Setting /></el-icon>系统设置
+              </el-dropdown-item>
+              <el-dropdown-item command="logout" divided>
+                <el-icon><SwitchButton /></el-icon>退出登录
+              </el-dropdown-item>
             </el-dropdown-menu>
           </template>
         </el-dropdown>
@@ -43,24 +43,55 @@
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router'
+import { ref, computed, onMounted } from 'vue'
+import { useRouter, useRoute } from 'vue-router'
 import {
-  Check,
-  Grid,
-  Bell,
-  QuestionFilled,
-  CaretBottom,
   House,
+  CaretBottom,
+  User,
+  Setting,
+  SwitchButton,
 } from "@element-plus/icons-vue";
+import { ElMessage } from 'element-plus';
 
 const router = useRouter()
+const route = useRoute()
+
+const userInfo = ref({
+  username: '',
+  nickname: '',
+  email: '',
+  role: 'user',
+})
+
+const currentTitle = computed(() => route.meta?.title || '智能检测')
+
+const roleText = computed(() => {
+  const map = { admin: '管理员', user: '普通用户' }
+  return map[userInfo.value.role] || '普通用户'
+})
+
+onMounted(() => {
+  try {
+    const stored = localStorage.getItem('user')
+    if (stored) {
+      userInfo.value = JSON.parse(stored)
+    }
+  } catch (e) {
+    // ignore
+  }
+})
 
 const handleCommand = (command) => {
   if (command === 'logout') {
     localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    ElMessage.success('已退出登录')
     router.push('/login')
   } else if (command === 'profile') {
     router.push('/profile')
+  } else if (command === 'settings') {
+    router.push('/settings')
   }
 }
 </script>
@@ -97,13 +128,6 @@ const handleCommand = (command) => {
 .header-actions {
   display: flex;
   align-items: center;
-}
-
-.status-tag {
-  margin-right: 24px;
-  padding: 6px 12px;
-  border-radius: 20px;
-  font-size: 13px;
 }
 
 .action-icons {

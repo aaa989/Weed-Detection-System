@@ -27,9 +27,9 @@
 
 # 导入 MinIO Python SDK 的 Minio 客户端类
 from minio import Minio
-
-# 导入 MinIO 错误异常类，用于处理 MinIO 操作中的错误
 from minio.error import S3Error
+from urllib3.util import Retry
+import urllib3
 
 # 导入 FastAPI 的 UploadFile 类型，用于处理文件上传
 from fastapi import UploadFile
@@ -75,11 +75,17 @@ class MinIOService:
         try:
             endpoint = f"{settings.minio.host}:{settings.minio.port}"
 
+            http_client = urllib3.PoolManager(
+                timeout=urllib3.Timeout(connect=3.0, read=5.0),
+                retries=Retry(total=1, backoff_factor=0.1),
+            )
+
             self.client = Minio(
                 endpoint=endpoint,
                 access_key=settings.minio.access_key,
                 secret_key=settings.minio.secret_key,
-                secure=settings.minio.secure
+                secure=settings.minio.secure,
+                http_client=http_client,
             )
 
             self._ensure_buckets()

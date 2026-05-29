@@ -81,3 +81,7 @@ def get_current_user_from_token(token: str) -> Optional[dict]:
         return {"user_id": user_id, "username": username}
     except JWTError:
         return None
+
+
+def get_user_by_id(db: Session, user_id: str) -> Optional[User]:
+    return db.query(User).filter(User.id == user_id).first()

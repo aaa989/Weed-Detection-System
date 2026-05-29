@@ -382,11 +382,15 @@ class RealtimeDetectionResult(BaseModel):
     """
     实时检测结果数据模型
 
-    与 DetectionResult 的区别：
-    - 不包含数据库相关字段（如 detection_id、created_at）
-    - 不包含图片 URL
-    - 包含图像尺寸信息，便于前端对齐绘制
-    - 专门用于实时帧检测返回
+    不包含数据库相关字段（如id、创建时间），专门用于实时帧检测返回
+    包含图像尺寸信息，便于前端对齐绘制
+
+    属性：
+        boxes: 检测框列表
+        total_objects: 检测到的目标总数
+        detection_time: 检测耗时（秒）
+        image_width: 图片宽度
+        image_height: 图片高度
     """
     boxes: List[DetectionBox]
     total_objects: int
@@ -398,6 +402,11 @@ class RealtimeDetectionResult(BaseModel):
 class RealtimeDetectionResponse(BaseModel):
     """
     实时检测响应模型
+
+    属性：
+        success: 是否成功
+        message: 提示信息
+        data: 检测结果数据（成功时有值）
     """
     success: bool
     message: str

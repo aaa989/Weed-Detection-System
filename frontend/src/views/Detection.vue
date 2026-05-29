@@ -40,6 +40,21 @@
             </el-upload>
           </template>
 
+          <div v-if="detectMode === 'single'" class="threshold-section">
+            <div class="threshold-label">
+              <span>置信度阈值</span>
+              <span class="threshold-value">{{ confidenceThreshold.toFixed(2) }}</span>
+            </div>
+            <el-slider
+              v-model="confidenceThreshold"
+              :min="0.05"
+              :max="0.9"
+              :step="0.05"
+              :disabled="isDetecting"
+            />
+            <div class="threshold-tip">越低检出越多目标，越高越精准</div>
+          </div>
+
           <div class="upload-actions">
             <el-button
               type="primary"
@@ -70,12 +85,43 @@
             <span>已完成: {{ batchCompleted }}/{{ batchTotal }}</span>
             <span v-if="batchFailed > 0" class="failed-count">失败: {{ batchFailed }}</span>
           </div>
+          <div v-if="batchCompletedResults.length > 0" class="batch-results-summary">
+            <div class="summary-title">检测结果汇总</div>
+            <div class="summary-stats">
+              <div class="summary-item">
+                <span class="summary-label">总目标数</span>
+                <span class="summary-value">{{ batchTotalObjects }}</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">平均耗时</span>
+                <span class="summary-value">{{ batchAvgTime }}s</span>
+              </div>
+              <div class="summary-item">
+                <span class="summary-label">成功/总数</span>
+                <span class="summary-value">{{ batchCompleted }}/{{ batchTotal }}</span>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
       <div class="result-section">
         <div class="section-card result-card">
-          <ResultViewer :result="detectionResult" />
+          <div v-if="detectMode === 'batch' && batchCompletedResults.length > 0" class="batch-result-header">
+            <div class="result-tabs">
+              <span
+                v-for="(item, index) in batchCompletedResults"
+                :key="index"
+                class="result-tab"
+                :class="{ active: currentBatchIndex === index }"
+                @click="switchBatchResult(index)"
+              >
+                {{ index + 1 }}
+              </span>
+            </div>
+            <span class="current-file-name">{{ currentBatchFileName }}</span>
+          </div>
+          <ResultViewer :result="currentDisplayResult" />
         </div>
       </div>
     </div>
@@ -95,6 +141,7 @@ const detectMode = ref<'single' | 'batch'>('single')
 const uploadFile = ref<File | null>(null)
 const isDetecting = ref(false)
 const detectionResult = ref<DetectionResult | null>(null)
+const confidenceThreshold = ref(0.25)
 
 const batchFileList = ref<any[]>([])
 const batchTaskId = ref('')
@@ -103,6 +150,8 @@ const batchProgress = ref(0)
 const batchTotal = ref(0)
 const batchCompleted = ref(0)
 const batchFailed = ref(0)
+const batchResults = ref<any[]>([])
+const currentBatchIndex = ref(0)
 
 let batchPollTimer: ReturnType<typeof setInterval> | null = null
 
@@ -116,9 +165,64 @@ const batchStatusText = computed(() => {
   return map[batchStatus.value] || batchStatus.value
 })
 
+const batchCompletedResults = computed(() => {
+  return batchResults.value.filter((r: any) => r.status === 'completed' && r.result)
+})
+
+const currentBatchFileName = computed(() => {
+  if (batchCompletedResults.value.length > 0 && currentBatchIndex.value < batchCompletedResults.value.length) {
+    return batchCompletedResults.value[currentBatchIndex.value].filename || `图片 ${currentBatchIndex.value + 1}`
+  }
+  return ''
+})
+
+const currentDisplayResult = computed(() => {
+  if (detectMode.value === 'batch' && batchCompletedResults.value.length > 0) {
+    const item = batchCompletedResults.value[currentBatchIndex.value]
+    if (item && item.result) {
+      return {
+        detection_id: item.result.detection_id,
+        image_url: item.result.image_url || '',
+        result_image_url: item.result.result_image_url || '',
+        boxes: item.result.boxes || [],
+        total_objects: item.result.total_objects || 0,
+        detection_time: item.result.detection_time || 0,
+        model_name: 'rsod-yolo11n',
+        created_at: new Date().toISOString(),
+      }
+    }
+  }
+  return detectionResult.value
+})
+
+function switchBatchResult(index: number) {
+  currentBatchIndex.value = index
+}
+
+const batchTotalObjects = computed(() => {
+  return batchCompletedResults.value.reduce((sum: number, r: any) => sum + (r.result?.total_objects || 0), 0)
+})
+
+const batchAvgTime = computed(() => {
+  if (batchCompletedResults.value.length === 0) return '0.00'
+  const total = batchCompletedResults.value.reduce((sum: number, r: any) => sum + (r.result?.detection_time || 0), 0)
+  return (total / batchCompletedResults.value.length).toFixed(2)
+})
+
+function getCurrentUserId(): string | null {
+  try {
+    const user = JSON.parse(localStorage.getItem('user') || '{}')
+    return user.id || null
+  } catch {
+    return null
+  }
+}
+
 function onModeChange() {
   detectionResult.value = null
   batchFileList.value = []
+  batchResults.value = []
+  currentBatchIndex.value = 0
   stopBatchPolling()
   batchTaskId.value = ''
 }
@@ -153,7 +257,8 @@ async function handleSingleDetect() {
   const startTime = performance.now()
 
   try {
-    const res = await detectSingleImage(uploadFile.value)
+    const userId = getCurrentUserId()
+    const res = await detectSingleImage(uploadFile.value, 'rsod-yolo11n', confidenceThreshold.value, userId)
     if (res.success && res.data) {
       detectionResult.value = {
         ...res.data,
@@ -176,12 +281,16 @@ async function handleBatchDetect() {
   isDetecting.value = true
 
   try {
+    const userId = getCurrentUserId()
     const formData = new FormData()
     batchFileList.value.forEach((file: any) => {
       if (file.raw) {
         formData.append('files', file.raw)
       }
     })
+    if (userId) {
+      formData.append('user_id', userId)
+    }
 
     const res = await batchUpload(formData)
     if (res.success) {
@@ -191,6 +300,7 @@ async function handleBatchDetect() {
       batchProgress.value = 0
       batchCompleted.value = 0
       batchFailed.value = 0
+      batchResults.value = []
       ElMessage.success(`批量任务已创建，共 ${res.total} 张图片`)
       startBatchPolling()
     } else {
@@ -216,6 +326,10 @@ function startBatchPolling() {
         batchTotal.value = res.total || 0
         if (res.total > 0) {
           batchProgress.value = Math.round(((res.completed + res.failed) / res.total) * 100)
+        }
+
+        if (res.results && res.results.length > 0) {
+          batchResults.value = res.results
         }
 
         if (res.status === 'completed' || res.status === 'failed') {
@@ -245,7 +359,6 @@ function stopBatchPolling() {
   height: 100%;
   display: flex;
   flex-direction: column;
-  padding: 20px 24px;
 }
 
 .page-header {
@@ -319,6 +432,33 @@ function stopBatchPolling() {
   min-width: 140px;
 }
 
+.threshold-section {
+  margin-top: 16px;
+  padding: 12px;
+  background: rgba(64, 158, 255, 0.05);
+  border-radius: 8px;
+}
+
+.threshold-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: #c8d6e5;
+  margin-bottom: 8px;
+}
+
+.threshold-value {
+  color: #409EFF;
+  font-weight: 600;
+}
+
+.threshold-tip {
+  font-size: 12px;
+  color: #909399;
+  margin-top: 4px;
+}
+
 .batch-progress-card {
   margin-top: 16px;
 }
@@ -333,6 +473,46 @@ function stopBatchPolling() {
 
 .failed-count {
   color: #F56C6C;
+}
+
+.batch-results-summary {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(64, 158, 255, 0.1);
+}
+
+.summary-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #c8d6e5;
+  margin-bottom: 12px;
+}
+
+.summary-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.summary-item {
+  background: rgba(64, 158, 255, 0.05);
+  border-radius: 8px;
+  padding: 10px;
+  text-align: center;
+}
+
+.summary-label {
+  display: block;
+  font-size: 11px;
+  color: #909399;
+  margin-bottom: 4px;
+}
+
+.summary-value {
+  display: block;
+  font-size: 18px;
+  font-weight: 700;
+  color: #409EFF;
 }
 
 .upload-section {
@@ -372,5 +552,56 @@ function stopBatchPolling() {
   height: 100%;
   display: flex;
   flex-direction: column;
+}
+
+.batch-result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(64, 158, 255, 0.1);
+}
+
+.result-tabs {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.result-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: rgba(64, 158, 255, 0.1);
+  border: 1px solid rgba(64, 158, 255, 0.2);
+  color: #c8d6e5;
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.result-tab:hover {
+  background: rgba(64, 158, 255, 0.2);
+  border-color: #409EFF;
+}
+
+.result-tab.active {
+  background: #409EFF;
+  border-color: #409EFF;
+  color: #fff;
+  font-weight: 600;
+}
+
+.current-file-name {
+  font-size: 12px;
+  color: #909399;
+  max-width: 150px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 </style>

@@ -73,7 +73,8 @@ ensure_directories()
 async def detect_single_image(
     file: UploadFile = File(...),      # 上传的图片文件（必填）
     model_name: str = Form("rsod-yolo11n"), # 使用的模型名称（可选）
-    user_id: str = Form(None)          # 用户 ID（可选）
+    user_id: str = Form(None),         # 用户 ID（可选）
+    confidence_threshold: float = Form(None),  # 置信度阈值（可选，默认使用配置值）
 ):
     """
     单图目标检测接口
@@ -121,7 +122,11 @@ async def detect_single_image(
         image_path = os.path.join(settings.upload_dir, filename)
 
         # 调用检测服务进行单图检测（支持用户 ID）
-        result = detection_service.detect_single_image(image_path, user_id, model_name, minio_service)
+        result = detection_service.detect_single_image(
+            image_path, user_id, model_name,
+            minio_service,
+            confidence_threshold=confidence_threshold
+        )
 
         # 检测完成后，删除临时上传的文件（节省空间）
         try:
@@ -137,16 +142,14 @@ async def detect_single_image(
         )
 
     except FileNotFoundError as e:
-        # 模型文件未找到
         raise HTTPException(
             status_code=500,
-            detail="模型文件未找到"
+            detail=f"文件未找到: {str(e)}"
         )
     except Exception as e:
-        # 如果检测过程中发生错误，抛出 500 错误
         raise HTTPException(
-            status_code=500,                 # HTTP 状态码：服务器内部错误
-            detail=f"检测失败: {str(e)}"    # 详细错误信息
+            status_code=500,
+            detail=f"检测失败: {str(e)}"
         )
 
 
@@ -248,8 +251,7 @@ async def get_detection_history(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            message="获取历史记录失败",
-            detail=str(e)
+            detail="获取历史记录失败"
         )
 
 
@@ -280,7 +282,7 @@ async def get_detection_by_id(
         if not record:
             raise HTTPException(
                 status_code=404,
-                message="检测记录不存在"
+                detail="检测记录不存在"
             )
 
         # 获取文件名
@@ -338,8 +340,7 @@ async def get_detection_by_id(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            message="获取检测记录失败",
-            detail=str(e)
+            detail="获取检测记录失败"
         )
 
 
@@ -370,7 +371,7 @@ async def delete_detection(
         if not success:
             raise HTTPException(
                 status_code=404,
-                message="检测记录不存在"
+                detail="检测记录不存在"
             )
 
         return {
@@ -383,8 +384,7 @@ async def delete_detection(
     except Exception as e:
         raise HTTPException(
             status_code=500,
-            message="删除检测记录失败",
-            detail=str(e)
+            detail="删除检测记录失败"
         )
 
 
@@ -493,6 +493,5 @@ def get_file(bucket: str, filename: str):
         traceback.print_exc()
         raise HTTPException(
             status_code=404,
-            message="文件未找到",
-            detail=f"{type(e).__name__}: {str(e)}"
+            detail="文件未找到"
         )

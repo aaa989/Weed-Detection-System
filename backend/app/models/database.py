@@ -20,8 +20,12 @@ DATABASE_URL = (
     f"@{settings.database.host}:{settings.database.port}/{settings.database.database}"
 )
 
-# 创建数据库引擎
-engine = create_engine(DATABASE_URL)
+# 创建数据库引擎（带连接超时，防止 Docker 不可用时长时间阻塞）
+engine = create_engine(
+    DATABASE_URL,
+    connect_args={"connect_timeout": 5},
+    pool_pre_ping=True,
+)
 
 # 创建会话工厂
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

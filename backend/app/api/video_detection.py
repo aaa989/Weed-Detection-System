@@ -1,12 +1,13 @@
+import logging
+
 import cv2
 import numpy as np
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException
 
 from app.services.detection_service import detection_service
 from app.models.schemas import RealtimeDetectionResponse
-from app.utils.common import get_logger
 
-logger = get_logger(__name__)
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/video-detection", tags=["video-detection"])
 
@@ -18,6 +19,12 @@ async def detect_realtime_frame(
     confidence_threshold: float = Form(0.25),
     iou_threshold: float = Form(0.7)
 ):
+    """
+    实时视频帧检测接口
+
+    接收视频播放时的单帧图片，使用模型进行目标检测，
+    返回检测结果（不保存到数据库）
+    """
     try:
         contents = await file.read()
 

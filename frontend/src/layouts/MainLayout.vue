@@ -26,11 +26,12 @@
 }
 
 .sidebar {
-  width: 200px;
+  width: 220px;
   background-color: #ffffff;
   border-right: 1px solid var(--border-color);
   display: flex;
   flex-direction: column;
+  flex-shrink: 0;
 }
 
 .main-container {
@@ -38,22 +39,24 @@
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-width: 0;
 }
 
 .header {
-  height: 64px;
+  height: 56px;
   background-color: #ffffff;
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 24px;
+  flex-shrink: 0;
 }
 
 .content {
   flex: 1;
-  padding: 24px 32px;
+  padding: 20px 24px;
   overflow-y: auto;
-  background-color: #f0f7f2;
+  background-color: #f5f6fa;
 }
 </style>

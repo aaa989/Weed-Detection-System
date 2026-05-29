@@ -254,6 +254,10 @@ class Settings(BaseModel):
     # 范围：0.0 - 1.0，默认 0.45
     iou_threshold: float = float(os.getenv("IOU_THRESHOLD", "0.45"))
 
+    # DeepSeek AI 配置
+    deepseek_api_key: str = os.getenv("DEEPSEEK_API_KEY", "")
+    deepseek_api_url: str = os.getenv("DEEPSEEK_API_URL", "https://api.deepseek.com/v1/chat/completions")
+
 
 # =============================================================================
 # 全局配置实例

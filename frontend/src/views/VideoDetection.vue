@@ -5,101 +5,100 @@
         <el-icon :size="22"><VideoPlay /></el-icon>
         视频检测
       </h2>
+      <el-tag v-if="isDetecting" type="success" effect="light" class="status-tag">
+        <el-icon class="el-icon--left"><Check /></el-icon>
+        实时检测中
+      </el-tag>
+      <el-tag v-else-if="currentDetection || hasResult" type="info" effect="light" class="status-tag">
+        <el-icon class="el-icon--left"><CircleCheck /></el-icon>
+        检测已结束
+      </el-tag>
+      <el-tag v-else type="info" effect="light" class="status-tag">
+        <el-icon class="el-icon--left"><Upload /></el-icon>
+        等待检测
+      </el-tag>
     </div>
 
     <div class="detection-content">
-      <div class="video-panel">
-        <div class="panel-header">
-          <span class="panel-title">视频检测</span>
-          <el-tag :type="getTagType()" effect="light" class="result-tag">
-            <el-icon class="el-icon--left" v-if="isRealtimeDetecting"><Check /></el-icon>
-            <el-icon class="el-icon--left" v-else-if="currentDetection"><CircleCheck /></el-icon>
-            <el-icon class="el-icon--left" v-else><Upload /></el-icon>
-            {{ getTagText() }}
-          </el-tag>
+      <div class="video-panel section-card">
+        <div class="card-title">视频播放</div>
+
+        <div v-if="!hasVideo" class="video-placeholder" @click="triggerFileInput">
+          <el-icon class="placeholder-icon"><Monitor /></el-icon>
+          <p class="placeholder-text">点击上传视频</p>
+          <p class="placeholder-desc">支持 mp4、avi、mov 等格式</p>
+          <input
+            type="file"
+            accept="video/*"
+            class="video-file-input"
+            ref="fileInputRef"
+            @change="handleVideoUpload"
+          />
         </div>
 
-        <div class="video-container">
-          <div v-if="!hasVideo" class="video-placeholder" @click="triggerFileInput">
-            <el-icon class="placeholder-icon"><Monitor /></el-icon>
-            <p class="placeholder-text">点击上传视频</p>
-            <p class="placeholder-desc">支持 mp4、avi、mov 等格式</p>
-            <input
-              type="file"
-              accept="video/*"
-              class="video-file-input"
-              @change="handleVideoUpload"
+        <div v-else class="video-content">
+          <div class="video-player-wrapper">
+            <video
+              ref="videoRef"
+              :src="originalVideoUrl"
+              class="video-player"
+              :controls="!realtimeMode"
+              @loadedmetadata="onVideoLoaded"
+              @timeupdate="onTimeUpdate"
+              @ended="onVideoEnded"
+            />
+            <canvas
+              ref="canvasRef"
+              class="detection-canvas"
+              :class="{ 'canvas-active': realtimeMode && currentDetection }"
             />
           </div>
 
-          <div v-else class="video-content">
-            <div class="video-player-wrapper">
-              <video
-                ref="videoRef"
-                :src="originalVideoUrl"
-                class="video-player"
-                :controls="!isRealtimeDetecting"
-                @loadedmetadata="onVideoLoaded"
-                @timeupdate="onTimeUpdate"
-                @ended="onVideoEnded"
-              />
-              <canvas
-                ref="canvasRef"
-                class="detection-canvas"
-                :class="{ 'canvas-active': isRealtimeDetecting && currentDetection }"
-              />
+          <div v-if="realtimeMode" class="realtime-stats">
+            <div class="stat-item">
+              <span class="stat-label">当前帧</span>
+              <span class="stat-value">{{ currentFrameIndex }}</span>
             </div>
-
-            <div v-if="isRealtimeDetecting" class="realtime-stats">
-              <div class="stat-item">
-                <span class="stat-label">当前帧</span>
-                <span class="stat-value">{{ currentFrameIndex }}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">检测目标</span>
-                <span class="stat-value highlight">{{ currentDetection?.total_objects || 0 }}</span>
-              </div>
-              <div class="stat-item">
-                <span class="stat-label">检测耗时</span>
-                <span class="stat-value">{{ currentDetection?.detection_time?.toFixed(2) || '0' }}ms</span>
-              </div>
+            <div class="stat-item">
+              <span class="stat-label">检测目标</span>
+              <span class="stat-value highlight">{{ currentDetection?.total_objects || 0 }}</span>
             </div>
+            <div class="stat-item">
+              <span class="stat-label">检测耗时</span>
+              <span class="stat-value">{{ currentDetection?.detection_time ? (currentDetection.detection_time * 1000).toFixed(0) : '0' }}ms</span>
+            </div>
+          </div>
 
-            <div class="video-info">
-              <div class="info-row">
-                <span class="info-label">视频时长</span>
-                <span class="info-value">{{ formatDuration(videoDuration) }}</span>
-              </div>
-              <div class="info-row">
-                <span class="info-label">当前时间</span>
-                <span class="info-value">{{ formatDuration(currentTime) }}</span>
-              </div>
+          <div class="video-info">
+            <div class="info-row">
+              <span class="info-label">视频时长</span>
+              <span class="info-value">{{ formatDuration(videoDuration) }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">当前时间</span>
+              <span class="info-value">{{ formatDuration(currentTime) }}</span>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="result-panel">
-        <div class="result-card">
-          <div class="card-header">
-            <el-icon><List /></el-icon>
-            <span class="card-title">检测结果</span>
-          </div>
+      <div class="right-panel">
+        <div class="result-card section-card">
+          <div class="card-title">检测结果</div>
 
           <div v-if="!hasVideo" class="empty-state">
             <el-icon class="empty-icon"><Upload /></el-icon>
             <p class="empty-text">请上传视频开始检测</p>
-            <p class="empty-desc">上传遥感影像视频以识别目标</p>
           </div>
 
-          <div v-else-if="!currentDetection && !hasFullResult" class="empty-state">
+          <div v-else-if="!currentDetection && !hasResult && !isDetecting" class="empty-state">
             <el-icon class="empty-icon"><CircleCheck /></el-icon>
-            <p class="empty-text">{{ isRealtimeDetecting ? '实时检测中...' : '等待检测' }}</p>
-            <p class="empty-desc">{{ isRealtimeDetecting ? '视频正在播放并实时检测' : '点击开始检测按钮' }}</p>
+            <p class="empty-text">{{ realtimeMode ? '实时检测中...' : '等待检测' }}</p>
+            <p class="empty-desc">点击开始检测按钮</p>
           </div>
 
           <div v-else class="result-content">
-            <div v-if="currentDetection && isRealtimeDetecting" class="realtime-result">
+            <div v-if="currentDetection && realtimeMode" class="realtime-result">
               <div class="result-summary">
                 <div class="summary-item">
                   <span class="summary-value">{{ currentDetection.total_objects }}</span>
@@ -113,6 +112,7 @@
                   :key="index"
                   class="detection-item"
                 >
+                  <span class="color-dot" :style="{ background: getClassColor(box.class_name) }" />
                   <span class="detection-name">{{ box.chinese_name || box.class_name }}</span>
                   <span class="detection-confidence">{{ (box.confidence * 100).toFixed(1) }}%</span>
                 </div>
@@ -122,43 +122,77 @@
               </div>
             </div>
 
-            <div v-if="hasFullResult" class="full-result">
+            <div v-if="hasResult && taskStatus === 'completed'" class="full-result">
               <div class="result-summary">
                 <div class="summary-item">
                   <span class="summary-value">{{ detectionCount }}</span>
                   <span class="summary-label">检测目标总数</span>
                 </div>
                 <div class="summary-item">
-                  <span class="summary-value">{{ elapsed || '-' }}</span>
-                  <span class="summary-label">检测耗时(s)</span>
+                  <span class="summary-value">{{ elapsed ? Math.round(elapsed) : '-' }}</span>
+                  <span class="summary-label">耗时(s)</span>
                 </div>
               </div>
 
-              <div v-if="detectionSummary.length > 0" class="detection-stats">
-                <div v-for="(det, index) in detectionSummary" :key="index" class="summary-item-row">
+              <div class="detection-stats">
+                <div class="detection-stat-item">
+                  <span class="detection-stat-label">已处理帧</span>
+                  <span class="detection-stat-value">{{ processedFrames }} / {{ totalFrames }}</span>
+                </div>
+              </div>
+
+              <div v-if="detections.length > 0" class="detection-summary-list">
+                <div v-for="(summary, index) in detectionSummary" :key="index" class="detection-item">
                   <span class="color-dot" :style="{ background: classColors[index % classColors.length] }" />
-                  <span class="summary-name">{{ det.name }}</span>
-                  <span class="summary-count">{{ det.count }}</span>
+                  <span class="detection-name">{{ summary.name }}</span>
+                  <span class="detection-confidence">{{ summary.count }}</span>
+                </div>
+              </div>
+
+              <div style="margin-top: 16px; text-align: center">
+                <el-button type="success" @click="downloadVideo">
+                  <el-icon><Download /></el-icon>
+                  下载检测结果视频
+                </el-button>
+              </div>
+            </div>
+
+            <div v-if="taskStatus === 'processing'" class="full-result">
+              <el-progress
+                :percentage="progress"
+                :status="taskStatus === 'completed' ? 'success' : undefined"
+                :stroke-width="16"
+              />
+              <div class="progress-stats">
+                <div class="stat">
+                  <span class="stat-label">已处理帧</span>
+                  <span class="stat-num">{{ processedFrames }} / {{ totalFrames }}</span>
                 </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="action-card">
-          <div class="action-header">
-            <span class="action-title">检测设置</span>
-          </div>
+        <div class="action-card section-card">
+          <div class="card-title">检测设置</div>
 
           <div class="mode-selection">
             <div class="mode-item">
-              <el-radio v-model="detectionMode" label="realtime" :disabled="isProcessing">
+              <el-radio
+                v-model="detectionMode"
+                label="realtime"
+                :disabled="isDetecting"
+              >
                 实时检测
               </el-radio>
               <span class="mode-desc">视频播放时实时检测</span>
             </div>
             <div class="mode-item">
-              <el-radio v-model="detectionMode" label="full" :disabled="isProcessing">
+              <el-radio
+                v-model="detectionMode"
+                label="full"
+                :disabled="isDetecting"
+              >
                 完整检测
               </el-radio>
               <span class="mode-desc">处理整个视频并保存结果</span>
@@ -176,8 +210,9 @@
                 :min="0.01"
                 :max="0.9"
                 :step="0.01"
-                :disabled="isProcessing"
+                :disabled="isDetecting"
               />
+              <div class="param-tip">更低阈值检测更多目标，可能产生假阳性</div>
             </div>
 
             <div class="param-item" v-if="detectionMode === 'full'">
@@ -188,9 +223,9 @@
               <el-slider
                 v-model="frameInterval"
                 :min="1"
-                :max="10"
+                :max="30"
                 :step="1"
-                :disabled="isProcessing"
+                :disabled="isDetecting"
               />
               <div class="param-tip">每隔多少帧检测一次</div>
             </div>
@@ -205,19 +240,9 @@
                 :min="2"
                 :max="15"
                 :step="1"
-                :disabled="isProcessing"
+                :disabled="isDetecting"
               />
-              <div class="param-tip">每秒检测帧数（越高检测越频繁，但延迟可能增加）</div>
-            </div>
-
-            <div class="param-item" v-if="detectionMode === 'realtime'">
-              <div class="param-tip">
-                <ul style="margin: 8px 0 0 16px; padding: 0; font-size: 12px;">
-                  <li>降低检测帧率可减少延迟</li>
-                  <li>已启用图片压缩加速传输</li>
-                  <li>检测框在检测间隔持续显示</li>
-                </ul>
-              </div>
+              <div class="param-tip">每秒检测帧数（越高检测越频繁，延迟可能增加）</div>
             </div>
           </div>
 
@@ -226,20 +251,21 @@
               size="default"
               class="btn-upload"
               @click="triggerFileInput"
-              :disabled="isProcessing"
+              :disabled="isDetecting"
             >
               <el-icon><Upload /></el-icon>
               上传视频
             </el-button>
             <el-button
-              v-if="!isRealtimeDetecting"
+              v-if="!realtimeMode || !isDetecting"
               type="primary"
               size="default"
               class="btn-detect"
-              :disabled="!hasVideo || isProcessing"
-              @click="performDetection"
+              :disabled="!hasVideo || isDetecting"
+              @click="performVideoDetection"
+              :loading="isProcessing"
             >
-              <el-icon><Refresh /></el-icon>
+              <el-icon><Search /></el-icon>
               {{ isProcessing ? '检测中...' : '开始检测' }}
             </el-button>
             <el-button
@@ -253,13 +279,6 @@
               停止检测
             </el-button>
           </div>
-
-          <div v-if="fullTaskStatus === 'completed'" class="result-download-section">
-            <el-button type="success" @click="downloadVideo" style="width: 100%; margin-top: 16px">
-              <el-icon><Download /></el-icon>
-              下载检测结果视频
-            </el-button>
-          </div>
         </div>
       </div>
     </div>
@@ -267,65 +286,65 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
+import { ref, computed, watch, onBeforeUnmount, nextTick } from 'vue'
 import { ElMessage } from 'element-plus'
 import {
-  Monitor,
-  Upload,
-  Check,
-  List,
-  CircleCheck,
-  Refresh,
-  VideoPause,
-  VideoPlay,
-  Download,
+  VideoPlay, Search, Upload, UploadFilled, Download,
+  Check, List, CircleCheck, Refresh, VideoPause, Monitor,
 } from '@element-plus/icons-vue'
 import { detectRealtimeFrame } from '@/api/detection'
 import { videoUploadAndDetect, getVideoStatus } from '@/api/video'
 
 const videoRef = ref(null)
 const canvasRef = ref(null)
+const fileInputRef = ref(null)
 const hasVideo = ref(false)
 const originalVideoUrl = ref(null)
 const videoDuration = ref(0)
 const currentTime = ref(0)
 const currentFrameIndex = ref(0)
 
-const isRealtimeDetecting = ref(false)
+const isDetecting = ref(false)
 const isProcessing = ref(false)
+const detectionResult = ref(null)
 const currentDetection = ref(null)
 const detectionMode = ref('realtime')
 
 const confidenceThreshold = ref(0.25)
-const frameInterval = ref(5)
+const iouThreshold = ref(0.7)
+const frameInterval = ref(10)
 const detectionFPS = ref(5)
 
-const fullTaskId = ref('')
-const fullTaskStatus = ref('')
-const fullProgress = ref(0)
+const taskId = ref('')
+const taskStatus = ref('')
+const progress = ref(0)
 const processedFrames = ref(0)
 const totalFrames = ref(0)
 const detectionCount = ref(0)
 const elapsed = ref(0)
-const detectionsList = ref([])
+const detections = ref([])
+
+const classColors = ['#FF6B6B', '#4ECDC4', '#45B7D1', '#96CEB4', '#FFD93D', '#6C5CE7']
+const classColorMap = {
+  'crop': '#4ECDC4',
+  'weed': '#FF6B6B',
+}
 
 let detectionTimer = null
-let animationFrameId = null
 let canvasContext = null
-let pollTimer = null
-
+let animationFrameId = null
 let lastBoxes = []
 let lastVideoWidth = 0
 let lastVideoHeight = 0
 let isProcessingFrame = false
+let pollTimer = null
 
-const classColors = ['#409EFF', '#67C23A', '#E6A23C', '#F56C6C', '#909399', '#B37FEB']
-
-const hasFullResult = computed(() => fullTaskStatus.value === 'completed')
+const realtimeMode = computed(() => detectionMode.value === 'realtime')
+const hasResult = computed(() => taskStatus.value === 'completed' || taskStatus.value === 'failed')
 
 const detectionSummary = computed(() => {
   const stats = {}
-  detectionsList.value.forEach(d => {
+  detections.value.forEach(d => {
     const key = d.class_name
     if (!stats[key]) stats[key] = { name: d.chinese_name || d.class_name, count: 0 }
     stats[key].count++
@@ -333,65 +352,40 @@ const detectionSummary = computed(() => {
   return Object.values(stats)
 })
 
-const formatDuration = (seconds) => {
+function getClassColor(className) {
+  return classColorMap[className] || '#FF6B6B'
+}
+
+function formatDuration(seconds) {
   if (!seconds || seconds <= 0) return '--:--'
   const mins = Math.floor(seconds / 60)
   const secs = Math.floor(seconds % 60)
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`
 }
 
-const getTagType = () => {
-  if (isRealtimeDetecting.value) return 'success'
-  if (currentDetection.value) return 'info'
-  return 'info'
+function triggerFileInput() {
+  fileInputRef.value?.click()
 }
 
-const getTagText = () => {
-  if (isRealtimeDetecting.value) return '实时检测中'
-  if (currentDetection.value) return '检测已结束'
-  return '等待检测'
-}
-
-const triggerFileInput = () => {
-  const input = document.querySelector('.video-file-input')
-  if (input) input.click()
-}
-
-const handleVideoUpload = async (event) => {
+function handleVideoUpload(event) {
   const file = event.target.files?.[0]
   if (!file) return
 
-  try {
-    if (originalVideoUrl.value) {
-      URL.revokeObjectURL(originalVideoUrl.value)
-    }
-
-    originalVideoUrl.value = URL.createObjectURL(file)
-    hasVideo.value = true
-    currentDetection.value = null
-    currentFrameIndex.value = 0
-    currentTime.value = 0
-    fullTaskStatus.value = ''
-    detectionsList.value = []
-
-    await nextTick()
-    const video = videoRef.value
-    if (video) {
-      video.onloadedmetadata = () => {
-        videoDuration.value = video.duration
-      }
-      video.onerror = () => {
-        ElMessage.error('视频加载失败')
-        hasVideo.value = false
-      }
-    }
-  } catch (error) {
-    console.error('视频加载失败:', error)
-    ElMessage.error('视频加载失败')
+  if (originalVideoUrl.value) {
+    URL.revokeObjectURL(originalVideoUrl.value)
   }
+
+  originalVideoUrl.value = URL.createObjectURL(file)
+  hasVideo.value = true
+  detectionResult.value = null
+  currentDetection.value = null
+  currentFrameIndex.value = 0
+  currentTime.value = 0
+  taskId.value = ''
+  taskStatus.value = ''
 }
 
-const onVideoLoaded = () => {
+function onVideoLoaded() {
   const video = videoRef.value
   if (video) {
     videoDuration.value = video.duration
@@ -399,19 +393,21 @@ const onVideoLoaded = () => {
   }
 }
 
-const onTimeUpdate = () => {
+function onTimeUpdate() {
   const video = videoRef.value
-  if (video) currentTime.value = video.currentTime
+  if (video) {
+    currentTime.value = video.currentTime
+  }
 }
 
-const onVideoEnded = () => {
-  if (detectionMode.value === 'realtime' && isRealtimeDetecting.value) {
+function onVideoEnded() {
+  if (realtimeMode.value && isDetecting.value) {
     stopRealtimeDetection()
     ElMessage.success('视频播放完成，检测结束')
   }
 }
 
-const initCanvas = () => {
+function initCanvas() {
   const video = videoRef.value
   const canvas = canvasRef.value
   if (!video || !canvas) return
@@ -421,15 +417,14 @@ const initCanvas = () => {
   canvas.width = displayWidth
   canvas.height = displayHeight
   canvasContext = canvas.getContext('2d')
-  canvasContext.clearRect(0, 0, canvas.width, canvas.height)
 }
 
-const clearCanvas = () => {
+function clearCanvas() {
   if (!canvasContext || !canvasRef.value) return
   canvasContext.clearRect(0, 0, canvasRef.value.width, canvasRef.value.height)
 }
 
-const drawDetectionBoxes = (boxes, videoWidth, videoHeight, interpolate = false) => {
+function drawDetectionBoxes(boxes, videoWidth, videoHeight, interpolate = false) {
   if (!canvasContext || !canvasRef.value || !videoRef.value) return
 
   const canvas = canvasRef.value
@@ -455,21 +450,12 @@ const drawDetectionBoxes = (boxes, videoWidth, videoHeight, interpolate = false)
     videoHeight = lastVideoHeight
   }
 
-  const colorMap = {
-    'crop': '#67C23A',
-    'weed': '#F56C6C',
-    'aircraft': '#FF6B6B',
-    'oiltank': '#4ECDC4',
-    'overpass': '#45B7D1',
-    'playground': '#96CEB4',
-  }
-
   boxesToDraw.forEach((box) => {
     const x1 = box.x1 * scaleX
     const y1 = box.y1 * scaleY
     const x2 = box.x2 * scaleX
     const y2 = box.y2 * scaleY
-    const color = colorMap[box.class_name] || '#FF6B6B'
+    const color = getClassColor(box.class_name)
 
     canvasContext.strokeStyle = color
     canvasContext.lineWidth = 2
@@ -492,7 +478,18 @@ const drawDetectionBoxes = (boxes, videoWidth, videoHeight, interpolate = false)
   }
 }
 
-const captureAndDetectFrame = async () => {
+function animateCanvas() {
+  if (!isDetecting.value) return
+
+  const video = videoRef.value
+  if (video && !video.paused && !video.ended && lastBoxes.length > 0 && lastVideoWidth > 0) {
+    drawDetectionBoxes([], lastVideoWidth, lastVideoHeight, true)
+  }
+
+  animationFrameId = requestAnimationFrame(animateCanvas)
+}
+
+async function captureAndDetectFrame() {
   const video = videoRef.value
   if (!video || video.paused || video.ended || isProcessingFrame) return
 
@@ -517,14 +514,13 @@ const captureAndDetectFrame = async () => {
     const formData = new FormData()
     formData.append('file', blob, 'frame.jpg')
     formData.append('confidence_threshold', confidenceThreshold.value.toString())
-    formData.append('iou_threshold', '0.7')
+    formData.append('iou_threshold', iouThreshold.value.toString())
 
     const response = await detectRealtimeFrame(formData)
 
     if (response.success && response.data) {
       currentDetection.value = response.data
-      const boxes = response.data.boxes || []
-      drawDetectionBoxes(boxes, response.data.image_width, response.data.image_height)
+      drawDetectionBoxes(response.data.boxes || [], response.data.image_width, response.data.image_height)
       currentFrameIndex.value++
     }
   } catch (error) {
@@ -534,18 +530,7 @@ const captureAndDetectFrame = async () => {
   }
 }
 
-const animateCanvas = () => {
-  if (!isRealtimeDetecting.value) return
-
-  const video = videoRef.value
-  if (video && !video.paused && !video.ended && lastBoxes.length > 0 && lastVideoWidth > 0) {
-    drawDetectionBoxes([], lastVideoWidth, lastVideoHeight, true)
-  }
-
-  animationFrameId = requestAnimationFrame(animateCanvas)
-}
-
-const startRealtimeDetection = async () => {
+async function startRealtimeDetection() {
   const video = videoRef.value
   if (!video) {
     ElMessage.error('视频未加载')
@@ -556,10 +541,6 @@ const startRealtimeDetection = async () => {
     ElMessage.info('正在加载视频，请稍候...')
     await new Promise((resolve) => {
       video.onloadeddata = resolve
-      video.onerror = () => {
-        ElMessage.error('视频加载失败')
-        resolve()
-      }
       setTimeout(resolve, 10000)
     })
   }
@@ -569,7 +550,7 @@ const startRealtimeDetection = async () => {
     return
   }
 
-  isRealtimeDetecting.value = true
+  isDetecting.value = true
   isProcessing.value = true
   currentDetection.value = null
   currentFrameIndex.value = 0
@@ -597,7 +578,7 @@ const startRealtimeDetection = async () => {
   detectionTimer = setInterval(captureAndDetectFrame, intervalMs)
 }
 
-const stopRealtimeDetection = () => {
+function stopRealtimeDetection() {
   const video = videoRef.value
 
   if (detectionTimer) {
@@ -610,61 +591,36 @@ const stopRealtimeDetection = () => {
     animationFrameId = null
   }
 
-  if (video) video.pause()
+  if (video) {
+    video.pause()
+  }
 
-  isRealtimeDetecting.value = false
+  isDetecting.value = false
   isProcessing.value = false
-
   clearCanvas()
   lastBoxes = []
   isProcessingFrame = false
 }
 
-const startFullDetection = async () => {
-  if (!originalVideoUrl.value) {
-    ElMessage.warning('请先上传视频')
-    return
-  }
-
-  try {
-    isProcessing.value = true
-
-    const videoFile = await fetch(originalVideoUrl.value).then((res) => res.blob())
-
-    const formData = new FormData()
-    formData.append('file', videoFile, 'video.mp4')
-    formData.append('model_name', 'rsod-yolo11n')
-    formData.append('frame_interval', String(frameInterval.value))
-
-    const res = await videoUploadAndDetect(formData)
-    if (res.success) {
-      fullTaskId.value = res.task_id
-      fullTaskStatus.value = 'processing'
-      ElMessage.success('视频检测任务已启动')
-      startPolling()
-    } else {
-      ElMessage.error(res.message || '任务启动失败')
-      isProcessing.value = false
-    }
-  } catch (error) {
-    console.error('视频检测错误:', error)
-    ElMessage.error('检测失败，请稍后重试')
-    isProcessing.value = false
+function stopPolling() {
+  if (pollTimer) {
+    clearInterval(pollTimer)
+    pollTimer = null
   }
 }
 
-const startPolling = () => {
+function startPolling() {
   if (pollTimer) return
   pollTimer = setInterval(async () => {
     try {
-      const res = await getVideoStatus(fullTaskId.value)
+      const res = await getVideoStatus(taskId.value)
       if (res.success) {
-        fullTaskStatus.value = res.status
-        fullProgress.value = res.progress || 0
+        taskStatus.value = res.status
+        progress.value = res.progress || 0
         processedFrames.value = res.processed_frames || 0
         totalFrames.value = res.total_frames || 0
         detectionCount.value = (res.detections || []).length
-        detectionsList.value = res.detections || []
+        detections.value = res.detections || []
         elapsed.value = res.elapsed ? Math.round(res.elapsed) : 0
 
         if (res.status === 'completed' || res.status === 'failed') {
@@ -683,41 +639,56 @@ const startPolling = () => {
   }, 3000)
 }
 
-const stopPolling = () => {
-  if (pollTimer) {
-    clearInterval(pollTimer)
-    pollTimer = null
-  }
-}
-
-const performDetection = () => {
-  if (!hasVideo.value) {
+async function performVideoDetection() {
+  if (!originalVideoUrl.value) {
     ElMessage.warning('请先上传视频')
     return
   }
 
-  if (detectionMode.value === 'realtime') {
+  if (realtimeMode.value) {
     startRealtimeDetection()
-  } else {
-    startFullDetection()
+    return
+  }
+
+  try {
+    isProcessing.value = true
+
+    const videoBlob = await fetch(originalVideoUrl.value).then((res) => res.blob())
+
+    const formData = new FormData()
+    formData.append('file', videoBlob, 'video.mp4')
+    formData.append('frame_interval', frameInterval.value.toString())
+    formData.append('model_name', 'rsod-yolo11n')
+
+    const res = await videoUploadAndDetect(formData)
+    if (res.success) {
+      taskId.value = res.task_id
+      taskStatus.value = 'processing'
+      ElMessage.success('视频检测任务已启动')
+      startPolling()
+    } else {
+      ElMessage.error(res.message || '任务启动失败')
+      isProcessing.value = false
+    }
+  } catch (error) {
+    console.error('视频检测错误:', error)
+    ElMessage.error('检测失败，请稍后重试')
+    isProcessing.value = false
   }
 }
 
-const downloadVideo = () => {
+function downloadVideo() {
   const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api'
-  window.open(`${baseUrl}/detection/video/download/${fullTaskId.value}`, '_blank')
+  window.open(`${baseUrl}/detection/video/download/${taskId.value}`, '_blank')
 }
 
 watch(detectionMode, (newMode) => {
-  if (newMode === 'realtime' && isRealtimeDetecting.value) {
-    stopRealtimeDetection()
-  }
-  if (newMode === 'full') {
+  if (newMode === 'realtime' && isDetecting.value) {
     stopRealtimeDetection()
   }
 })
 
-onUnmounted(() => {
+onBeforeUnmount(() => {
   stopRealtimeDetection()
   stopPolling()
   if (originalVideoUrl.value) {
@@ -731,12 +702,13 @@ onUnmounted(() => {
   height: 100%;
   display: flex;
   flex-direction: column;
+  padding: 20px 24px;
 }
 
 .page-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 12px;
   margin-bottom: 20px;
 }
 
@@ -753,39 +725,19 @@ onUnmounted(() => {
   color: #409EFF;
 }
 
-.detection-content {
-  flex: 1;
-  display: flex;
-  gap: 24px;
-  min-height: 0;
-}
-
-.video-panel {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-width: 0;
-}
-
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.panel-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: #e8ecf4;
-}
-
-.result-tag {
+.status-tag {
   font-size: 12px;
 }
 
-.video-container {
+.detection-content {
   flex: 1;
+  display: grid;
+  grid-template-columns: 1fr 380px;
+  gap: 20px;
+  min-height: 0;
+}
+
+.section-card {
   background: rgba(13, 17, 55, 0.6);
   border: 1px solid rgba(64, 158, 255, 0.1);
   border-radius: 12px;
@@ -794,17 +746,48 @@ onUnmounted(() => {
   flex-direction: column;
 }
 
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #c8d6e5;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(64, 158, 255, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.right-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.result-card {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.video-panel {
+  min-height: 0;
+  overflow: hidden;
+}
+
 .video-placeholder {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   flex: 1;
+  min-height: 400px;
   border: 2px dashed rgba(64, 158, 255, 0.2);
   border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s;
-  min-height: 300px;
 }
 
 .video-placeholder:hover {
@@ -814,7 +797,7 @@ onUnmounted(() => {
 
 .placeholder-icon {
   font-size: 64px;
-  color: #5a6d8a;
+  color: #409EFF;
   margin-bottom: 16px;
 }
 
@@ -826,7 +809,7 @@ onUnmounted(() => {
 
 .placeholder-desc {
   font-size: 14px;
-  color: #5a6d8a;
+  color: #909399;
 }
 
 .video-file-input {
@@ -838,6 +821,7 @@ onUnmounted(() => {
   flex-direction: column;
   gap: 16px;
   flex: 1;
+  min-height: 0;
 }
 
 .video-player-wrapper {
@@ -872,7 +856,7 @@ onUnmounted(() => {
   display: flex;
   gap: 24px;
   padding: 12px 16px;
-  background: linear-gradient(135deg, #1a237e 0%, #283593 100%);
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   border-radius: 8px;
   color: #fff;
 }
@@ -911,7 +895,7 @@ onUnmounted(() => {
 }
 
 .info-label {
-  color: #5a6d8a;
+  color: #909399;
   font-size: 14px;
 }
 
@@ -921,62 +905,30 @@ onUnmounted(() => {
   font-weight: 500;
 }
 
-.result-panel {
-  width: 360px;
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  flex-shrink: 0;
-}
-
-.result-card {
-  flex: 1;
-  background: rgba(13, 17, 55, 0.6);
-  border: 1px solid rgba(64, 158, 255, 0.1);
-  border-radius: 12px;
-  padding: 20px;
-  overflow-y: auto;
-  min-height: 0;
-}
-
-.card-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgba(64, 158, 255, 0.1);
-}
-
-.card-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #c8d6e5;
-}
-
 .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 40px 20px;
-  color: #5a6d8a;
+  color: #909399;
 }
 
 .empty-icon {
   font-size: 48px;
   margin-bottom: 16px;
+  color: #409EFF;
 }
 
 .empty-text {
   font-size: 16px;
-  color: #909399;
+  color: #c8d6e5;
   margin: 8px 0;
 }
 
 .empty-desc {
   font-size: 14px;
-  color: #5a6d8a;
+  color: #909399;
 }
 
 .result-content {
@@ -1008,7 +960,7 @@ onUnmounted(() => {
 
 .summary-label {
   font-size: 12px;
-  color: #5a6d8a;
+  color: #909399;
   margin-top: 4px;
 }
 
@@ -1018,40 +970,25 @@ onUnmounted(() => {
   gap: 8px;
 }
 
-.summary-item-row {
+.detection-stat-item {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
-  background: rgba(64, 158, 255, 0.05);
-  border-radius: 6px;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(64, 158, 255, 0.1);
 }
 
-.color-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
+.detection-stat-label {
+  color: #909399;
+  font-size: 14px;
 }
 
-.summary-name {
-  flex: 1;
+.detection-stat-value {
   color: #c8d6e5;
   font-size: 14px;
 }
 
-.summary-count {
-  color: #409EFF;
-  font-weight: 600;
-}
-
-.realtime-result {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.detection-list {
+.detection-list,
+.detection-summary-list {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
@@ -1062,7 +999,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 8px;
   padding: 6px 12px;
-  background: rgba(64, 158, 255, 0.08);
+  background: rgba(64, 158, 255, 0.05);
   border-radius: 4px;
   font-size: 14px;
 }
@@ -1079,28 +1016,40 @@ onUnmounted(() => {
 .no-detection {
   padding: 20px;
   text-align: center;
-  color: #5a6d8a;
+  color: #909399;
   background: rgba(64, 158, 255, 0.05);
   border-radius: 8px;
 }
 
+.color-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.progress-stats {
+  display: flex;
+  gap: 24px;
+  margin-top: 16px;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.stat-num {
+  font-size: 18px;
+  font-weight: 700;
+  color: #409EFF;
+  font-family: 'Courier New', monospace;
+}
+
 .action-card {
-  background: rgba(13, 17, 55, 0.6);
-  border: 1px solid rgba(64, 158, 255, 0.1);
-  border-radius: 12px;
-  padding: 20px;
-}
-
-.action-header {
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgba(64, 158, 255, 0.1);
-}
-
-.action-title {
-  font-size: 14px;
-  font-weight: 600;
-  color: #c8d6e5;
+  flex-shrink: 0;
 }
 
 .mode-selection {
@@ -1118,7 +1067,7 @@ onUnmounted(() => {
 
 .mode-desc {
   font-size: 12px;
-  color: #5a6d8a;
+  color: #909399;
   margin-left: 24px;
 }
 
@@ -1140,7 +1089,7 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   font-size: 14px;
-  color: #909399;
+  color: #c8d6e5;
 }
 
 .param-value {
@@ -1150,7 +1099,7 @@ onUnmounted(() => {
 
 .param-tip {
   font-size: 12px;
-  color: #5a6d8a;
+  color: #909399;
 }
 
 .action-buttons {
@@ -1165,11 +1114,5 @@ onUnmounted(() => {
 .btn-detect,
 .btn-stop {
   flex: 2;
-}
-
-.result-download-section {
-  margin-top: 16px;
-  padding-top: 16px;
-  border-top: 1px solid rgba(64, 158, 255, 0.1);
 }
 </style>
